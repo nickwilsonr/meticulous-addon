@@ -2,6 +2,10 @@
 
 All notable user-facing changes to this add-on are documented here.
 
+## [0.2.13] - 2026-01-09
+
+- Fixed startup issues
+
 ## [0.2.12] - 2026-01-09
 
 - Fixed startup issues
