@@ -113,6 +113,7 @@ class MeticulousAddon:
         self.mqtt_client = None
         self.mqtt_last_failed = False  # Track connection state for logging
         self.mqtt_connect_attempt = 0  # Track retry attempts
+        self.mqtt_next_retry_time = 0.0  # Track when to retry MQTT
 
     def _load_config(self) -> Dict[str, Any]:
         """Load add-on configuration from options.json."""
@@ -770,17 +771,24 @@ class MeticulousAddon:
             try:
                 # Retry MQTT connection if not connected with exponential backoff
                 if self.mqtt_enabled and not self.mqtt_client:
-                    self.mqtt_connect_attempt += 1
-                    # Exponential backoff: 5s, 10s, 20s, 40s, max 120s
-                    backoff = min(5 * (2 ** max(0, self.mqtt_connect_attempt - 1)), 120)
-                    logger.debug(
-                        f"MQTT connection attempt {self.mqtt_connect_attempt} "
-                        f"(backoff: {backoff}s)"
-                    )
-                    self._mqtt_connect()
-                    if self.mqtt_client:
-                        # Reset attempts on successful connection
-                        self.mqtt_connect_attempt = 0
+                    import time
+                    current_time = time.time()
+                    if current_time >= self.mqtt_next_retry_time:
+                        self.mqtt_connect_attempt += 1
+                        # Exponential backoff: 5s, 10s, 20s, 40s, max 120s
+                        backoff = min(5 * (2 ** max(0, self.mqtt_connect_attempt - 1)), 120)
+                        logger.debug(
+                            f"MQTT connection attempt {self.mqtt_connect_attempt} "
+                            f"(backoff: {backoff}s)"
+                        )
+                        self._mqtt_connect()
+                        if self.mqtt_client:
+                            # Reset attempts on successful connection
+                            self.mqtt_connect_attempt = 0
+                            self.mqtt_next_retry_time = 0
+                        else:
+                            # Schedule next retry
+                            self.mqtt_next_retry_time = current_time + backoff
 
                 # Update profile info every 30 seconds
                 await self.update_profile_info()
