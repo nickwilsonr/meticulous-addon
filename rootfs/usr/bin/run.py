@@ -486,7 +486,7 @@ class MeticulousAddon:
             logger.info(f"MQTT connected to {self.mqtt_host}:{self.mqtt_port}")
         except Exception as e:
             self.mqtt_client = None
-            logger.warning(f"MQTT connection failed: {e}")
+            logger.info(f"MQTT connection attempt failed (will retry): {e}")
 
     async def publish_device_info(self):
         """Publish device information sensors to Home Assistant."""
