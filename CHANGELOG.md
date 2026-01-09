@@ -2,6 +2,12 @@
 
 All notable user-facing changes to this add-on are documented here.
 
+## [0.3.1] - 2026-01-09
+
+### 🐛 Bug Fixes
+- Fixed MQTT connectivity issues
+- Improved reliability
+
 ## [0.3.0] - 2026-01-09
 
 ### ✨ What's New
