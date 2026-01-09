@@ -286,6 +286,7 @@ class MeticulousAddon:
         # If MQTT is enabled, publish mapped sensor states
         if self.mqtt_enabled and self.mqtt_client:
             try:
+                published_count = 0
                 for key, value in sensor_data.items():
                     mapping = self._mqtt_sensor_mapping().get(key)
                     if not mapping:
@@ -294,6 +295,9 @@ class MeticulousAddon:
                     payload = str(value) if not isinstance(
                         value, (dict, list)) else jsonlib.dumps(value)
                     self.mqtt_client.publish(topic, payload, qos=0, retain=False)
+                    published_count += 1
+                if published_count > 0:
+                    logger.debug(f"Published {published_count} MQTT state updates")
             except Exception as e:
                 logger.warning(f"MQTT publish failed: {e}")
 
