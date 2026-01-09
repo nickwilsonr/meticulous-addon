@@ -1,5 +1,5 @@
 ---
-version: 0.2.9
+version: 0.2.10
 slug: meticulous_espresso
 name: Meticulous Espresso
 description: Integration for Meticulous Espresso machines with local API support
@@ -10,6 +10,7 @@ arch:
 startup: application
 boot: auto
 init: false
+apparmor: true
 homeassistant_api: true
 hassio_api: true
 hassio_role: default

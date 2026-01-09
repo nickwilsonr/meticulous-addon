@@ -6,6 +6,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [0.2.9] - 2026-01-09
+## [0.2.10] - 2026-01-09
+
+### Added
+- Increase S6 overlay verbosity (`S6_VERBOSITY=2`) to collect more startup logs.
+
+### Changed
+- Explicitly enable AppArmor in `config.yaml` (`apparmor: true`).
+
 
 ### Fixed
 - **Converted config.json and build.json to YAML format** (config.yaml, build.yaml) to match all official Home Assistant add-ons.
