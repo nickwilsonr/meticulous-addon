@@ -60,7 +60,10 @@ class MeticulousAddon:
         """Initialize the add-on."""
         self.config = self._load_config()
         self._setup_logging()
-        self.machine_ip = self.config.get("machine_ip")
+        raw_machine_ip = str(self.config.get("machine_ip", "")).strip()
+        if raw_machine_ip.lower().startswith("example") or " " in raw_machine_ip:
+            raw_machine_ip = ""
+        self.machine_ip = raw_machine_ip
         self.scan_interval = self.config.get("scan_interval", 30)
         self.running = False
         self.socket_connected = False
@@ -175,7 +178,10 @@ class MeticulousAddon:
     async def connect_to_machine(self) -> bool:
         """Connect to the Meticulous Espresso machine and setup Socket.IO."""
         if not self.machine_ip:
-            logger.error("No machine IP address configured!")
+            logger.error(
+                "No machine IP configured. Set 'machine_ip' in the add-on options "
+                "(e.g., 192.168.x.x or meticulous.local)."
+            )
             return False
 
         logger.info(f"Connecting to Meticulous machine at {self.machine_ip}")
@@ -1175,8 +1181,15 @@ class MeticulousAddon:
         self.loop = asyncio.get_running_loop()
         logger.info("Starting Meticulous Espresso Add-on")
         logger.info(
-            f"Configuration: machine_ip={self.machine_ip}, scan_interval={self.scan_interval}s"
+            f"Configuration: machine_ip={self.machine_ip}, " f"scan_interval={self.scan_interval}s"
         )
+        if not self.machine_ip:
+            logger.error(
+                "Machine IP is not set. Open the add-on options and enter the machine IP "
+                "or hostname (e.g., 192.168.x.x or meticulous.local). Startup aborted."
+            )
+            await self.publish_connectivity(False)
+            return
         self.running = True
 
         # Create aiohttp session for HA API calls
