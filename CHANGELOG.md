@@ -4,24 +4,15 @@ All notable user-facing changes to this add-on are documented here.
 
 ## [0.3.0] - 2026-01-09
 
-### ✨ Features
-- Full MQTT discovery integration - sensors and controls automatically appear in Home Assistant
-- Real-time machine status updates via Socket.IO
-- Polling fallback for non-real-time data (profile, settings, statistics)
-- Graceful handling of firmware/library version mismatches
+### ✨ What's New
+- **Full Home Assistant Integration** - Your Meticulous machine now appears in Home Assistant with all sensors and controls
+- **Real-time Updates** - See machine status, temperature, pressure, and shot timing instantly
+- **Automation Ready** - Create automations and routines based on your machine's state
 
 ### 🐛 Fixes
-- Fixed MQTT broker connectivity issues by removing host network isolation
-- Corrected DNS resolution for internal Home Assistant services
-- Added MQTT service dependency for proper startup sequencing
-- Resolved validation errors from pyMeticulous library mismatches
-- Fixed Socket.IO callback threading issues for real-time updates
-
-### 📋 What This Means for Users
-You now have full control of your Meticulous Espresso machine from Home Assistant:
-- **Sensors**: Temperature, pressure, flow rate, shot weight, timer, and more
-- **Controls**: Start/stop brewing, adjust settings, select profiles
-- **Automations**: Create routines based on machine state
+- Fixed MQTT connectivity issues preventing sensors from appearing
+- Improved startup reliability and error handling
+- Better firmware compatibility
 
 ## [0.2.x] - 2026-01-09
 
