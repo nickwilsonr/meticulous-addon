@@ -112,6 +112,7 @@ class MeticulousAddon:
         self.discovery_prefix = "homeassistant"
         self.mqtt_client = None
         self.mqtt_last_failed = False  # Track connection state for logging
+        self.mqtt_connect_attempt = 0  # Track retry attempts
 
     def _load_config(self) -> Dict[str, Any]:
         """Load add-on configuration from options.json."""
@@ -215,8 +216,7 @@ class MeticulousAddon:
             await self.publish_device_info()
             await self.publish_connectivity(True)
 
-            # Connect to MQTT broker and publish discovery
-            self._mqtt_connect()
+            # MQTT connection will be handled in periodic_updates with proper retry logic
 
             return True
 
@@ -768,9 +768,19 @@ class MeticulousAddon:
 
         while self.running:
             try:
-                # Retry MQTT connection if not connected
+                # Retry MQTT connection if not connected with exponential backoff
                 if self.mqtt_enabled and not self.mqtt_client:
+                    self.mqtt_connect_attempt += 1
+                    # Exponential backoff: 5s, 10s, 20s, 40s, max 120s
+                    backoff = min(5 * (2 ** max(0, self.mqtt_connect_attempt - 1)), 120)
+                    logger.debug(
+                        f"MQTT connection attempt {self.mqtt_connect_attempt} "
+                        f"(backoff: {backoff}s)"
+                    )
                     self._mqtt_connect()
+                    if self.mqtt_client:
+                        # Reset attempts on successful connection
+                        self.mqtt_connect_attempt = 0
 
                 # Update profile info every 30 seconds
                 await self.update_profile_info()
