@@ -171,6 +171,7 @@ class MeticulousAddon:
                     "possible"
                 )
                 # Use a placeholder object to continue operation
+
                 class PlaceholderDeviceInfo:
                     def __init__(self):
                         self.name = "Unknown"
@@ -178,6 +179,7 @@ class MeticulousAddon:
                         self.serial = "Unknown"
                         self.firmware = "Unknown"
                         self.software_version = "Unknown"
+                        self.model_version = "0.0.0"
 
                 device_info = PlaceholderDeviceInfo()
 
