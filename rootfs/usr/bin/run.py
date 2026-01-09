@@ -111,6 +111,7 @@ class MeticulousAddon:
         self.command_prefix = f"{self.slug}/command"
         self.discovery_prefix = "homeassistant"
         self.mqtt_client = None
+        self.mqtt_last_failed = False  # Track connection state for logging
 
     def _load_config(self) -> Dict[str, Any]:
         """Load add-on configuration from options.json."""
@@ -484,9 +485,15 @@ class MeticulousAddon:
             # Publish discovery once connected
             self._mqtt_publish_discovery()
             logger.info(f"MQTT connected to {self.mqtt_host}:{self.mqtt_port}")
+            self.mqtt_last_failed = False  # Reset failure flag on success
         except Exception as e:
             self.mqtt_client = None
-            logger.info(f"MQTT connection attempt failed (will retry): {e}")
+            # Only log at INFO level on first failure, subsequent retries at DEBUG
+            if not self.mqtt_last_failed:
+                logger.info(f"MQTT connection attempt failed (will retry): {e}")
+                self.mqtt_last_failed = True
+            else:
+                logger.debug(f"MQTT connection retry failed: {e}")
 
     async def publish_device_info(self):
         """Publish device information sensors to Home Assistant."""
