@@ -33,8 +33,8 @@ profile meticulous_espresso flags=(attach_disconnected,mediate_deleted) {
 
   # Python
   /usr/bin/python3* ix,
-  /usr/bin/*.py r,
-  /usr/lib/python* r,
+  /usr/bin/*.py rw,
+  /usr/lib/python* rw,
 
   # Network access
   network inet stream,
