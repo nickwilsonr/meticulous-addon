@@ -48,29 +48,23 @@ meticulous-addon/
 
 ## Dependency: pyMeticulous
 
-**Status:** Requires v0.2.0+ with Socket.IO (PR #15 - not yet merged)
+**Status:** Requires v0.2.0+ with Socket.IO (now available on PyPI)
 
 ### Installation
 
 ```bash
-# PR branch (until released to PyPI):
-pip install git+https://github.com/MeticulousHome/pyMeticulous.git@chore/update-wrapper-0.2.0
-
-# After PR #15 is merged and released:
 pip install pymeticulous>=0.2.0
 ```
 
-### What PR #15 Adds
+### What v0.2.0 Includes
 
 - Socket.IO support for real-time events
 - Event handlers: `onStatus`, `onTemperatureSensors`, `onProfileChange`, `onNotification`
 - Updated v0.2.0 API surface
 
-### Timeline
+### Resources
 
-Monitor: https://github.com/MeticulousHome/pyMeticulous/pull/15
-
-Once merged and released (estimated 1-4 weeks), update `requirements.txt` to use PyPI version.
+Package: https://pypi.org/project/pyMeticulous/
 
 ---
 

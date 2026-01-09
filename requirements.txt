@@ -1,10 +1,7 @@
 # Python dependencies for Meticulous Espresso Add-on
 aiohttp==3.9.1
 
-# Meticulous Python API wrapper
-# PR #15 adds Socket.IO support required by this add-on
-# Once PR #15 is merged and released, change to: pymeticulous>=0.2.0
-# Until then, install from PR branch:
-git+https://github.com/MeticulousHome/pyMeticulous.git@chore/update-wrapper-0.2.0#egg=pymeticulous
+# Meticulous Python API wrapper with Socket.IO support
+pymeticulous>=0.2.0
 
 paho-mqtt==1.6.1

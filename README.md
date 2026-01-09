@@ -159,12 +159,25 @@ For more examples, see [docs/automations.md](docs/automations.md).
 
 ---
 
+## Testing
+
+The add-on includes a comprehensive test suite (27 passing tests):
+
+```bash
+python tests/run_tests.py
+```
+
+Tests cover MQTT commands, configuration loading, error handling, and more. See [tests/README.md](tests/README.md) for details.
+
+---
+
 ## Documentation
 
 - [Automations Guide](docs/automations.md) — Example automations for Meticulous
 - [MQTT Topics Reference](docs/mqtt-topics.md) — Complete command reference
 
 **For Developers:**
+- [Development Guide](docs/development.md) — Setup and architecture details
 - [Contributing Guide](docs/CONTRIBUTING.md) — How to contribute code or report technical issues
 
 ---
@@ -182,9 +195,3 @@ See [docs/CONTRIBUTING.md](docs/CONTRIBUTING.md) if you want to contribute code 
 ## License
 
 MIT License - see [LICENSE](LICENSE) file for details.
-
----
-
-## Important Note
-
-⚠️ This add-on requires pyMeticulous v0.2.0+ with Socket.IO support (currently in PR #15). The add-on installs from the PR branch until v0.2.0 is released to PyPI. This doesn't affect functionality but may slightly increase build times.
