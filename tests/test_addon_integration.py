@@ -1,11 +1,15 @@
 """Integration tests for the Meticulous Espresso Add-on."""
-import unittest
-from unittest.mock import Mock, MagicMock, patch, AsyncMock
-import sys
-import os
 import json
+import os
+import sys
+import unittest
+from unittest.mock import patch
 
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'rootfs', 'usr', 'bin'))
+# Add project directory to path
+sys.path.insert(
+    0,
+    os.path.join(os.path.dirname(__file__), '..', 'rootfs', 'usr', 'bin')
+)
 
 
 class TestConfigLoading(unittest.TestCase):
@@ -21,7 +25,8 @@ class TestConfigLoading(unittest.TestCase):
             "scan_interval": 30,
             "log_level": "info"
         }
-        mock_open.return_value.__enter__.return_value.read.return_value = json.dumps(test_config)
+        mock_read = mock_open.return_value.__enter__.return_value.read
+        mock_read.return_value = json.dumps(test_config)
         
         from run import MeticulousAddon
         addon = MeticulousAddon()
@@ -64,8 +69,10 @@ class TestRetryLogic(unittest.TestCase):
         self.assertEqual(addon._calculate_backoff(2), 8)
         self.assertEqual(addon._calculate_backoff(3), 16)
         self.assertEqual(addon._calculate_backoff(4), 32)
-        self.assertEqual(addon._calculate_backoff(5), 60)  # Should cap at max
-        self.assertEqual(addon._calculate_backoff(10), 60)  # Should stay at max
+        # Should cap at max
+        self.assertEqual(addon._calculate_backoff(5), 60)
+        # Should stay at max
+        self.assertEqual(addon._calculate_backoff(10), 60)
 
     @patch('os.path.exists')
     def test_backoff_calculation_with_jitter(self, mock_exists):
@@ -99,7 +106,9 @@ class TestMQTTDiscovery(unittest.TestCase):
         addon.machine_ip = "192.168.1.100"
         
         # Test discovery payload generation
-        payload = addon._create_sensor_discovery("state", "State", "mdi:coffee-maker")
+        payload = addon._create_sensor_discovery(
+            "state", "State", "mdi:coffee-maker"
+        )
         
         self.assertIsInstance(payload, dict)
         self.assertIn("name", payload)
@@ -208,15 +217,19 @@ class TestImportHandling(unittest.TestCase):
     def test_pymeticulous_import(self):
         """Test pyMeticulous import succeeds."""
         try:
-            from meticulous.api import Api, ApiOptions
-            from meticulous.api_types import ActionType, StatusData, Temperatures
+            from meticulous.api import Api, ApiOptions  # noqa: F401
+            from meticulous.api_types import (  # noqa: F401
+                ActionType,
+                StatusData,
+                Temperatures,
+            )
         except ImportError as e:
             self.fail(f"pyMeticulous import failed: {e}")
 
     def test_mqtt_import(self):
         """Test paho-mqtt import succeeds."""
         try:
-            import paho.mqtt.client as mqtt
+            import paho.mqtt.client as mqtt  # noqa: F401
         except ImportError as e:
             self.fail(f"paho-mqtt import failed: {e}")
 

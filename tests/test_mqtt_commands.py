@@ -1,14 +1,19 @@
 """Unit tests for MQTT command handlers."""
 import json
+import os
+import sys
 import unittest
-from unittest.mock import Mock, MagicMock, patch
+from unittest.mock import Mock
+
 from meticulous.api_types import ActionType, APIError
 
-import sys
-import os
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'rootfs', 'usr', 'bin'))
+# Add project directory to path
+sys.path.insert(
+    0,
+    os.path.join(os.path.dirname(__file__), '..', 'rootfs', 'usr', 'bin')
+)
 
-from mqtt_commands import (
+from mqtt_commands import (  # noqa: E402
     mqtt_on_message,
     handle_command_start_brew,
     handle_command_stop_brew,
@@ -46,7 +51,8 @@ class TestMQTTCommands(unittest.TestCase):
 
     def test_start_brew_api_error(self):
         """Test start_brew with API error."""
-        self.addon.api.execute_action.return_value = APIError(error="Connection failed")
+        error = APIError(error="Connection failed")
+        self.addon.api.execute_action.return_value = error
         handle_command_start_brew(self.addon)
         self.addon.api.execute_action.assert_called_once()
 
@@ -60,13 +66,17 @@ class TestMQTTCommands(unittest.TestCase):
         """Test successful continue_brew command."""
         self.addon.api.execute_action.return_value = {"success": True}
         handle_command_continue_brew(self.addon)
-        self.addon.api.execute_action.assert_called_once_with(ActionType.CONTINUE)
+        self.addon.api.execute_action.assert_called_once_with(
+            ActionType.CONTINUE
+        )
 
     def test_preheat_success(self):
         """Test successful preheat command."""
         self.addon.api.execute_action.return_value = {"success": True}
         handle_command_preheat(self.addon)
-        self.addon.api.execute_action.assert_called_once_with(ActionType.PREHEAT)
+        self.addon.api.execute_action.assert_called_once_with(
+            ActionType.PREHEAT
+        )
 
     def test_tare_scale_success(self):
         """Test successful tare_scale command."""
@@ -172,7 +182,7 @@ class TestCommandValidation(unittest.TestCase):
         # Should handle gracefully and not crash
         try:
             handle_command_set_brightness(self.addon, "{invalid json")
-        except:
+        except Exception:
             self.fail("Should handle invalid JSON gracefully")
 
     def test_set_brightness_out_of_range(self):
