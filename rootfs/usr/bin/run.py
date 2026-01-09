@@ -150,14 +150,13 @@ class MeticulousAddon:
 
             # Setup event handlers for Socket.IO using ApiOptions
             options = ApiOptions(
-                onStatus=self._handle_status_event,
                 onTemperatureSensors=self._handle_temperature_event,
                 onProfileChange=self._handle_profile_event,
                 onNotification=self._handle_notification_event,
             )
 
             # Initialize API
-            self.api = Api(base_url=base_url, options=options)
+            self.api = Api(base_url=base_url, options=options)  # type: ignore[assignment]
 
             # Test connection by fetching device info
             device_info = self.api.get_device_info()
