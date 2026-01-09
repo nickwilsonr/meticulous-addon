@@ -392,6 +392,7 @@ class MeticulousAddon:
                 payload["unit_of_meas"] = "%"
             # Publish discovery config
             self.mqtt_client.publish(config_topic, jsonlib.dumps(payload), qos=0, retain=True)
+            logger.debug(f"Published discovery for {object_id}: {jsonlib.dumps(payload)}")
         logger.info(f"Published {len(self._mqtt_sensor_mapping())} MQTT discovery messages")
 
     async def _mqtt_publish_initial_state(self) -> None:
@@ -549,7 +550,20 @@ class MeticulousAddon:
 
             client = mqtt.Client(client_id=self.slug)
 
-            # Set callback for incoming commands
+            # Set callbacks
+            def on_connect(client, userdata, flags, rc):
+                if rc == 0:
+                    logger.debug(f"MQTT client connected with result code {rc}")
+                    # Publish discovery and initial state on successful connection
+                    self._mqtt_publish_discovery()
+                    if self.loop:
+                        asyncio.run_coroutine_threadsafe(
+                            self._mqtt_publish_initial_state(), self.loop
+                        )
+                else:
+                    logger.warning(f"MQTT client failed to connect: {rc}")
+
+            client.on_connect = on_connect
             client.on_message = lambda client, userdata, msg: mqtt_on_message(
                 self, client, userdata, msg)
 
@@ -557,24 +571,18 @@ class MeticulousAddon:
             client.will_set(self.availability_topic, payload="offline", qos=0, retain=True)
             if self.mqtt_username and self.mqtt_password:
                 client.username_pw_set(self.mqtt_username, self.mqtt_password)
+            
+            client.loop_start()
             client.connect(self.mqtt_host, self.mqtt_port, keepalive=60)
-
+            
             # Subscribe to command topics
             client.subscribe(f"{self.command_prefix}/#")
             logger.info(f"Subscribed to MQTT commands at {self.command_prefix}/#")
-
-            client.loop_start()
-            # Mark online
+            
+            # Mark online (will_set already done, but we can also publish immediately)
             client.publish(self.availability_topic, payload="online", qos=0, retain=True)
+            
             self.mqtt_client = client
-            # Publish discovery once connected
-            self._mqtt_publish_discovery()
-            # Fetch and publish initial sensor state (T0 snapshot)
-            # Schedule async call from sync context
-            if self.loop:
-                asyncio.run_coroutine_threadsafe(
-                    self._mqtt_publish_initial_state(), self.loop
-                )
             logger.info(f"MQTT connected to {self.mqtt_host}:{self.mqtt_port}")
             self.mqtt_last_failed = False  # Reset failure flag on success
         except Exception as e:
