@@ -2,6 +2,11 @@
 
 All notable user-facing changes to this add-on are documented here.
 
+## [0.3.4] - 2026-01-09
+
+### 🐛 Bug Fixes
+- Fixed MQTT connection timing issue preventing sensors from appearing in Home Assistant
+
 ## [0.3.3] - 2026-01-09
 
 ### ✨ Features
