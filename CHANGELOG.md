@@ -1,6 +1,11 @@
 # Changelog
 
 All notable user-facing changes to this add-on are documented here.
+## [0.4.2] - 2026-01-09
+
+### Bug Fix
+- Fixed crashes during live updates
+
 
 ## [0.4.1] - 2026-01-09
 

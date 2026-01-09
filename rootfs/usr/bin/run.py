@@ -16,7 +16,7 @@ import aiohttp
 # Import Meticulous API
 try:
     from meticulous.api import Api, ApiOptions
-    from meticulous.api_types import APIError, NotificationData, StatusData, Temperatures
+    from meticulous.api_types import APIError
 except ImportError as e:
     print(f"ERROR: Failed to import pyMeticulous: {e}")
     print("Make sure pyMeticulous is installed: pip install pymeticulous")
@@ -821,17 +821,17 @@ class MeticulousAddon:
     # Socket.IO Event Handlers
     # =========================================================================
 
-    def _handle_status_event(self, status: StatusData):
+    def _handle_status_event(self, status: dict):
         """Handle real-time status updates from Socket.IO."""
         try:
             # Extract state
-            state = status.state or "unknown"
+            state = status.get("state", "unknown")
             if state != self.current_state:
                 logger.info(f"Machine state changed: {self.current_state} -> {state}")
                 self.current_state = state
 
             # Detect profile changes
-            loaded_profile = status.loaded_profile
+            loaded_profile = status.get("loaded_profile")
             if loaded_profile and loaded_profile != self.current_profile:
                 logger.info(f"Profile changed: {self.current_profile} -> {loaded_profile}")
                 self.current_profile = loaded_profile
@@ -841,7 +841,7 @@ class MeticulousAddon:
                     asyncio.run_coroutine_threadsafe(self.update_profile_info(), self.loop)
 
             # Extract sensor data
-            sensors = status.sensors
+            sensors = status.get("sensors", {})
             if isinstance(sensors, dict):
                 # Convert dict to SensorData if needed
                 pressure = sensors.get("p", 0)
@@ -849,30 +849,36 @@ class MeticulousAddon:
                 weight = sensors.get("w", 0)
                 temperature = sensors.get("t", 0)
             else:
-                pressure = sensors.p
-                flow = sensors.f
-                weight = sensors.w
-                temperature = sensors.t
+                pressure = getattr(sensors, "p", 0)
+                flow = getattr(sensors, "f", 0)
+                weight = getattr(sensors, "w", 0)
+                temperature = getattr(sensors, "t", 0)
 
             sensor_data = {
                 "state": state,
-                "brewing": status.extracting or False,
+                "brewing": status.get("extracting", False),
                 "shot_timer": (
-                    status.profile_time / 1000.0 if status.profile_time else 0
+                    status.get("profile_time", 0) / 1000.0 if status.get("profile_time") else 0
                 ),  # Convert ms to seconds  # noqa: E501
-                "elapsed_time": status.time / 1000.0 if status.time else 0,
+                "elapsed_time": status.get("time", 0) / 1000.0 if status.get("time") else 0,
                 "pressure": pressure,
                 "flow_rate": flow,
                 "shot_weight": weight,
                 "temperature": temperature,
-                "active_profile": status.loaded_profile or "None",
+                "active_profile": status.get("loaded_profile", "None"),
             }
 
             # Add setpoints if available
-            if status.setpoints:
-                sensor_data["target_temperature"] = status.setpoints.temperature
-                sensor_data["target_pressure"] = status.setpoints.pressure
-                sensor_data["target_flow"] = status.setpoints.flow
+            setpoints = status.get("setpoints")
+            if setpoints:
+                if isinstance(setpoints, dict):
+                    sensor_data["target_temperature"] = setpoints.get("temperature")
+                    sensor_data["target_pressure"] = setpoints.get("pressure")
+                    sensor_data["target_flow"] = setpoints.get("flow")
+                else:
+                    sensor_data["target_temperature"] = getattr(setpoints, "temperature", None)
+                    sensor_data["target_pressure"] = getattr(setpoints, "pressure", None)
+                    sensor_data["target_flow"] = getattr(setpoints, "flow", None)
 
             # Publish to Home Assistant (async)
             if self.loop:
@@ -881,7 +887,7 @@ class MeticulousAddon:
                 )
 
             # Log during brewing
-            if status.extracting:
+            if status.get("extracting"):
                 logger.debug(
                     f"Brewing: {sensor_data['shot_timer']:.1f}s | "
                     f"P: {pressure:.1f} bar | "
@@ -892,7 +898,7 @@ class MeticulousAddon:
         except Exception as e:
             logger.error(f"Error handling status event: {e}", exc_info=True)
 
-    def _handle_temperature_event(self, temps: Temperatures):
+    def _handle_temperature_event(self, temps: dict):
         """Handle real-time temperature updates from Socket.IO."""
         try:
             # Handle both dict and object types
@@ -941,15 +947,20 @@ class MeticulousAddon:
         except Exception as e:
             logger.error(f"Error handling profile event: {e}", exc_info=True)
 
-    def _handle_notification_event(self, notification: NotificationData):
+    def _handle_notification_event(self, notification: dict):
         """Handle machine notifications from Socket.IO."""
         try:
-            logger.warning(f"Machine notification: {notification.message}")
+            message = (
+                notification.get("message", str(notification))
+                if isinstance(notification, dict)
+                else str(notification)
+            )
+            logger.warning(f"Machine notification: {message}")
 
             # Forward to Home Assistant as a persistent notification
             notif_data = {
                 "notification": {
-                    "message": notification.message,
+                    "message": message,
                     "title": "Meticulous Espresso",
                 }
             }
