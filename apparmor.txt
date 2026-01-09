@@ -14,6 +14,7 @@ profile meticulous_espresso flags=(attach_disconnected,mediate_deleted) {
   /run/{s6,s6-rc*,service}/** ix,
   /package/** ix,
   /command/** ix,
+  /etc/s6-overlay/** rwix,
   /etc/services.d/** rwix,
   /etc/cont-init.d/** rwix,
   /etc/cont-finish.d/** rwix,

@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.9] - 2026-01-09
+
+### Fixed
+- **Converted config.json and build.json to YAML format** (config.yaml, build.yaml) to match all official Home Assistant add-ons.
+- Set executable permission on S6 service run script in Dockerfile.
+- Marked run script as executable in Git repository.
+
 ## [0.2.8] - 2026-01-09
 
 ### Fixed
