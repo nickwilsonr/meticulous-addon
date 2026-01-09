@@ -32,8 +32,8 @@ profile meticulous_espresso flags=(attach_disconnected,mediate_deleted) {
   /share/** rw,
 
   # Python
-  /usr/bin/python3* ix,
-  /usr/bin/*.py rw,
+  /usr/bin/ rw,
+  /usr/bin/** rw,
   /usr/lib/python* rw,
 
   # Network access
