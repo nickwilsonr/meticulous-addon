@@ -823,13 +823,27 @@ class MeticulousAddon:
 
     def _handle_status_event(self, status: StatusData):
         """Handle real-time status updates from Socket.IO."""
-        logger.debug(f"Status event received: state={status.state}, extracting={status.extracting}")
+        logger.debug(
+            f"Status event received: state={status.state}, "
+            f"extracting={status.extracting}, "
+            f"profile={status.loaded_profile}"
+        )
         try:
             # Extract state
             state = status.state or "unknown"
             if state != self.current_state:
                 logger.info(f"Machine state changed: {self.current_state} -> {state}")
                 self.current_state = state
+
+            # Detect profile changes
+            loaded_profile = status.loaded_profile
+            if loaded_profile and loaded_profile != self.current_profile:
+                logger.info(f"Profile changed: {self.current_profile} -> {loaded_profile}")
+                self.current_profile = loaded_profile
+                # Trigger profile info update
+                if self.loop:
+                    logger.debug("Scheduling profile info update after profile change")
+                    asyncio.run_coroutine_threadsafe(self.update_profile_info(), self.loop)
 
             # Extract sensor data
             sensors = status.sensors
