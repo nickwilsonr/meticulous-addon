@@ -1,6 +1,6 @@
 # Developer Guide
 
-**For:** Contributors and developers  
+**For:** Contributors and developers
 **Audience:** Anyone building, testing, or extending the add-on
 
 ---
@@ -20,7 +20,7 @@
    {
      "machine_ip": "192.168.1.100",
      "scan_interval": 30,
-     "log_level": "debug"
+     "debug": true
    }
    ```
 
@@ -96,20 +96,21 @@ Machine API → Socket.IO + REST → Add-on → MQTT → Home Assistant
 
 ## Configuration
 
-**Add-on Options (config.json):**
+**Add-on Options (config.yaml):**
 ```json
 {
-  "machine_ip": "192.168.1.100",  // IP or hostname
-  "scan_interval": 30,             // 10-300 seconds
-  "log_level": "info",             // debug/info/warning/error
-  "retry_initial": 2,              // Initial retry delay (seconds)
-  "retry_max": 60,                 // Max retry delay (seconds)
-  "retry_jitter": true,            // Add 0-20% randomness
-  "mqtt_enabled": true,            // Enable MQTT discovery
-  "mqtt_host": "core-mosquitto",   // MQTT broker
-  "mqtt_port": 1883
+  "machine_ip": "192.168.1.100",    // IP or hostname (required)
+  "scan_interval": 30,               // 10-300 seconds
+  "debug": false,                    // Enable debug logging
+  "mqtt_enabled": true,              // Enable MQTT discovery
+  "mqtt_host": "core-mosquitto",     // MQTT broker (auto-detected)
+  "mqtt_port": 1883,                 // MQTT port
+  "mqtt_username": "",               // Auto-fetched from HA MQTT integration
+  "mqtt_password": ""                // Auto-fetched from HA MQTT integration
 }
 ```
+
+**Note:** MQTT credentials are automatically retrieved from the Home Assistant Supervisor Services API when the MQTT integration is configured, so you typically don't need to set `mqtt_username` or `mqtt_password` manually.
 
 ---
 

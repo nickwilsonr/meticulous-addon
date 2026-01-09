@@ -1,6 +1,6 @@
 # Architecture & Integration Guide
 
-**For:** Developers and technical contributors  
+**For:** Developers and technical contributors
 **Audience:** Contributors, maintainers, developers wanting to extend the add-on
 
 ## Overview
@@ -13,15 +13,15 @@ The Meticulous Home Assistant add-on provides real-time integration with Meticul
 
 ### Core Architecture
 ✅ **Socket.IO Real-time Updates**: Event handlers for status, temperature, profile changes, and notifications
-✅ **MQTT Discovery**: Auto-entity creation for 22+ sensors with device_class, units, and availability tracking
+✅ **MQTT Discovery**: Auto-entity creation for 25+ sensors with device_class, units, and availability tracking
 ✅ **MQTT Command Interface**: 8 service commands via MQTT topics
 ✅ **Exponential Backoff**: Resilient reconnection with configurable jitter
 ✅ **Health Metrics**: Diagnostic data publishing (uptime, reconnect count, error tracking)
 ✅ **Graceful Degradation**: Availability topic with online/offline states
 
-### Sensors (22 total)
+### Sensors (25 total)
 - **Machine Status**: connected, state
-- **Temperature**: boiler, brew head, target
+- **Temperature**: boiler, brew head, target, external_temp_1, external_temp_2
 - **Brewing**: brewing flag, pressure, flow rate, shot timer, shot weight, target weight
 - **Profile**: active profile name, author
 - **Settings**: sounds enabled, brightness
@@ -39,16 +39,15 @@ The Meticulous Home Assistant add-on provides real-time integration with Meticul
 - `meticulous_espresso/command/enable_sounds` (payload: true/false)
 
 ### Configuration Options
-- **Machine**: `machine_ip`, `scan_interval` (10-300s)
-- **Retry**: `retry_initial` (1-30s), `retry_max` (30-600s), `retry_jitter` (bool)
-- **MQTT**: `mqtt_enabled`, `mqtt_host`, `mqtt_port`, `mqtt_username`, `mqtt_password`
-- **Logging**: `log_level` (debug, info, warning, error)
+- **Machine**: `machine_ip` (IP or hostname), `scan_interval` (10-300s)
+- **MQTT**: `mqtt_enabled`, `mqtt_host`, `mqtt_port`, `mqtt_username`, `mqtt_password` (auto-fetched from HA)
+- **Logging**: `debug` (boolean)
 
 ## File Structure
 
 ```
 meticulous-addon/
-├── config.json                    # Add-on metadata & schema
+├── config.yaml                    # Add-on metadata & schema
 ├── Dockerfile                     # Multi-arch container build
 ├── build.json                     # Architecture-specific base images
 ├── requirements.txt               # Python dependencies
@@ -109,15 +108,17 @@ meticulous-addon/
 
 Focus on home automation use cases rather than exposing the full API. Provide actionable data and controls that make sense in a smart home context.
 
-### Sensors (22 total)
+### Sensors (25 total)
 
 **Machine Status** (2 sensors)
 - `sensor.meticulous_state`: Current state (idle, brewing, steaming, heating, preheating, error)
 - `binary_sensor.meticulous_brewing`: Extraction active flag (device_class: running)
 
-**Temperature** (3 sensors)
+**Temperature** (5 sensors)
 - `sensor.meticulous_boiler_temperature`: Boiler temp (device_class: temperature)
 - `sensor.meticulous_brew_head_temperature`: Brew head temp (device_class: temperature)
+- `sensor.meticulous_external_temp_1`: External temperature sensor 1 (device_class: temperature)
+- `sensor.meticulous_external_temp_2`: External temperature sensor 2 (device_class: temperature)
 - `sensor.meticulous_target_temperature`: Profile target temp (device_class: temperature)
 
 **Brewing** (6 sensors)

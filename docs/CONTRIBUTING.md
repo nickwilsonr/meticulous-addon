@@ -1,6 +1,6 @@
 # Contributing to Meticulous Home Assistant Add-on
 
-**For:** Developers and contributors  
+**For:** Developers and contributors
 **Audience:** Anyone wanting to contribute code, fix bugs, or enhance the add-on
 
 Thank you for your interest in contributing! This is the entry point for all developer-related information.

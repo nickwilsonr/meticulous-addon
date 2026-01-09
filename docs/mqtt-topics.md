@@ -1,6 +1,6 @@
 # MQTT Topics Reference
 
-**For:** End-users and developers  
+**For:** End-users and developers
 **Audience:** Anyone integrating via MQTT
 
 ---
@@ -191,7 +191,7 @@ sensor:
 		state_topic: "meticulous_espresso/health"
 		value_template: "{{ value_json.uptime_seconds / 3600 | round(1) }}"
 		unit_of_measurement: "hours"
-  
+
 	- platform: mqtt
 		name: "Espresso Add-on Reconnects"
 		state_topic: "meticulous_espresso/health"
@@ -234,4 +234,3 @@ mosquitto_sub -h localhost -t "meticulous_espresso/health" -v
 # Watch all command topics (for debugging)
 mosquitto_sub -h localhost -t "meticulous_espresso/command/#" -v
 ```
-

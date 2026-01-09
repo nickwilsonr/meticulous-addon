@@ -1,4 +1,5 @@
 """MQTT command handlers for Meticulous Espresso Add-on services."""
+
 import asyncio
 import json
 import logging
@@ -12,7 +13,7 @@ from meticulous.api_types import ActionType, APIError, BrightnessRequest, Partia
 logger = logging.getLogger(__name__)
 
 
-def mqtt_on_message(addon: 'MeticulousAddon', client, userdata, msg):
+def mqtt_on_message(addon: "MeticulousAddon", client, userdata, msg):
     """Handle incoming MQTT messages for commands."""
     try:
         topic = msg.topic
@@ -46,7 +47,8 @@ def mqtt_on_message(addon: 'MeticulousAddon', client, userdata, msg):
 # Command Handlers
 # =========================================================================
 
-def handle_command_start_brew(addon: 'MeticulousAddon'):
+
+def handle_command_start_brew(addon: "MeticulousAddon"):
     """Execute start_brew action."""
     if not addon.api:
         logger.error("Cannot start brew: API not connected")
@@ -58,7 +60,7 @@ def handle_command_start_brew(addon: 'MeticulousAddon'):
         logger.info("start_brew: Success")
 
 
-def handle_command_stop_brew(addon: 'MeticulousAddon'):
+def handle_command_stop_brew(addon: "MeticulousAddon"):
     """Execute stop_brew action."""
     if not addon.api:
         logger.error("Cannot stop brew: API not connected")
@@ -70,7 +72,7 @@ def handle_command_stop_brew(addon: 'MeticulousAddon'):
         logger.info("stop_brew: Success")
 
 
-def handle_command_continue_brew(addon: 'MeticulousAddon'):
+def handle_command_continue_brew(addon: "MeticulousAddon"):
     """Execute continue_brew action."""
     if not addon.api:
         logger.error("Cannot continue brew: API not connected")
@@ -82,7 +84,7 @@ def handle_command_continue_brew(addon: 'MeticulousAddon'):
         logger.info("continue_brew: Success")
 
 
-def handle_command_preheat(addon: 'MeticulousAddon'):
+def handle_command_preheat(addon: "MeticulousAddon"):
     """Execute preheat action."""
     if not addon.api:
         logger.error("Cannot preheat: API not connected")
@@ -94,7 +96,7 @@ def handle_command_preheat(addon: 'MeticulousAddon'):
         logger.info("preheat: Success")
 
 
-def handle_command_tare_scale(addon: 'MeticulousAddon'):
+def handle_command_tare_scale(addon: "MeticulousAddon"):
     """Execute tare_scale action."""
     if not addon.api:
         logger.error("Cannot tare scale: API not connected")
@@ -106,7 +108,7 @@ def handle_command_tare_scale(addon: 'MeticulousAddon'):
         logger.info("tare_scale: Success")
 
 
-def handle_command_load_profile(addon: 'MeticulousAddon', profile_id: str):
+def handle_command_load_profile(addon: "MeticulousAddon", profile_id: str):
     """Execute load_profile action."""
     if not addon.api:
         logger.error("Cannot load profile: API not connected")
@@ -126,7 +128,7 @@ def handle_command_load_profile(addon: 'MeticulousAddon', profile_id: str):
         logger.error(f"load_profile error: {e}", exc_info=True)
 
 
-def handle_command_set_brightness(addon: 'MeticulousAddon', payload: str):
+def handle_command_set_brightness(addon: "MeticulousAddon", payload: str):
     """Execute set_brightness action."""
     if not addon.api:
         logger.error("Cannot set brightness: API not connected")
@@ -150,7 +152,7 @@ def handle_command_set_brightness(addon: 'MeticulousAddon', payload: str):
         logger.error(f"set_brightness error: {e}", exc_info=True)
 
 
-def handle_command_enable_sounds(addon: 'MeticulousAddon', payload: str):
+def handle_command_enable_sounds(addon: "MeticulousAddon", payload: str):
     """Execute enable_sounds action."""
     if not addon.api:
         logger.error("Cannot enable/disable sounds: API not connected")

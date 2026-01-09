@@ -2,26 +2,21 @@
 """Meticulous Espresso Add-on main application."""
 import asyncio
 import json
+import json as jsonlib
 import logging
 import os
+import random
 import sys
 import warnings
-from typing import Any, Dict, Optional
-import random
 from datetime import datetime
+from typing import Any, Dict, Optional
 
 import aiohttp
-import json as jsonlib
 
 # Import Meticulous API
 try:
     from meticulous.api import Api, ApiOptions
-    from meticulous.api_types import (
-        StatusData,
-        Temperatures,
-        APIError,
-        NotificationData,
-    )
+    from meticulous.api_types import APIError, NotificationData, StatusData, Temperatures
 except ImportError as e:
     print(f"ERROR: Failed to import pyMeticulous: {e}")
     print("Make sure pyMeticulous is installed: pip install pymeticulous")
@@ -46,7 +41,7 @@ except ImportError as e:
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
-    handlers=[logging.StreamHandler(sys.stdout)]
+    handlers=[logging.StreamHandler(sys.stdout)],
 )
 
 logger = logging.getLogger(__name__)
@@ -114,7 +109,7 @@ class MeticulousAddon:
         self.mqtt_last_failed = False  # Track connection state for logging
         self.mqtt_connect_attempt = 0  # Track retry attempts
         self.mqtt_next_retry_time = 0.0  # Track when to retry MQTT
-        
+
         # Fetch MQTT credentials from Supervisor if not provided in config
         if self.mqtt_enabled and not (self.mqtt_username and self.mqtt_password):
             self._fetch_mqtt_credentials_from_supervisor()
@@ -123,6 +118,7 @@ class MeticulousAddon:
         """Fetch MQTT credentials from Home Assistant Supervisor Services API."""
         try:
             import requests
+
             headers = {"Authorization": f"Bearer {self.supervisor_token}"}
             response = requests.get("http://supervisor/services/mqtt", headers=headers, timeout=10)
             if response.status_code == 200:
@@ -131,9 +127,14 @@ class MeticulousAddon:
                 self.mqtt_port = mqtt_service.get("port", self.mqtt_port)
                 self.mqtt_username = mqtt_service.get("username")
                 self.mqtt_password = mqtt_service.get("password")
-                logger.info(f"Retrieved MQTT credentials from Supervisor: {self.mqtt_host}:{self.mqtt_port}")
+                logger.info(
+                    f"Retrieved MQTT credentials from Supervisor: "
+                    f"{self.mqtt_host}:{self.mqtt_port}"
+                )
             else:
-                logger.warning(f"Failed to fetch MQTT credentials from Supervisor: {response.status_code}")
+                logger.warning(
+                    f"Failed to fetch MQTT credentials from Supervisor: " f"{response.status_code}"
+                )
         except Exception as e:
             logger.warning(f"Could not fetch MQTT credentials from Supervisor: {e}")
 
@@ -202,8 +203,7 @@ class MeticulousAddon:
             except Exception as e:
                 logger.debug(f"Device info validation error (expected): {type(e).__name__}")
                 logger.warning(
-                    "Continuing despite validation error - firmware mismatch "
-                    "possible"
+                    "Continuing despite validation error - firmware mismatch " "possible"
                 )
                 # Use a placeholder object to continue operation
 
@@ -221,7 +221,8 @@ class MeticulousAddon:
             self.device_info = device_info
             logger.info(f"Connected to {device_info.name} (Serial: {device_info.serial})")
             logger.info(
-                f"Firmware: {device_info.firmware}, Software: {device_info.software_version}")
+                f"Firmware: {device_info.firmware}, Software: {device_info.software_version}"
+            )
 
             # Connect Socket.IO for real-time updates
             try:
@@ -256,8 +257,12 @@ class MeticulousAddon:
         logger.info(f"Connectivity state: {state}")
         # Publish availability via MQTT
         if self.mqtt_client:
-            self.mqtt_client.publish(self.availability_topic, payload=(
-                "online" if connected else "offline"), qos=0, retain=True)
+            self.mqtt_client.publish(
+                self.availability_topic,
+                payload=("online" if connected else "offline"),
+                qos=0,
+                retain=True,
+            )
 
     async def publish_health_metrics(self) -> None:
         """Publish add-on health metrics via MQTT."""
@@ -270,7 +275,9 @@ class MeticulousAddon:
                 "uptime_seconds": int(uptime),
                 "reconnect_count": self.reconnect_count,
                 "last_error": self.last_error,
-                "last_error_time": self.last_error_time.isoformat() if self.last_error_time else None,  # noqa: E501
+                "last_error_time": (
+                    self.last_error_time.isoformat() if self.last_error_time else None
+                ),  # noqa: E501
                 "api_connected": self.api_connected,
                 "socket_connected": self.socket_connected,
             }
@@ -314,8 +321,9 @@ class MeticulousAddon:
                     if not mapping:
                         continue
                     topic = mapping["state_topic"]
-                    payload = str(value) if not isinstance(
-                        value, (dict, list)) else jsonlib.dumps(value)
+                    payload = (
+                        str(value) if not isinstance(value, (dict, list)) else jsonlib.dumps(value)
+                    )
                     self.mqtt_client.publish(topic, payload, qos=0, retain=False)
                     published_count += 1
                 if published_count > 0:
@@ -342,26 +350,106 @@ class MeticulousAddon:
         base = self.state_prefix
         # fmt: off  # Long topic names are more readable on single lines
         return {
-            "connected": {"component": "binary_sensor", "state_topic": f"{base}/connected/state", "name": "Meticulous Connected"},  # noqa: E501
-            "state": {"component": "sensor", "state_topic": f"{base}/state/state", "name": "Meticulous State"},  # noqa: E501
-            "brewing": {"component": "binary_sensor", "state_topic": f"{base}/brewing/state", "name": "Meticulous Brewing"},  # noqa: E501
-            "boiler_temperature": {"component": "sensor", "state_topic": f"{base}/boiler_temperature/state", "name": "Boiler Temperature"},  # noqa: E501
-            "brew_head_temperature": {"component": "sensor", "state_topic": f"{base}/brew_head_temperature/state", "name": "Brew Head Temperature"},  # noqa: E501
-            "external_temp_1": {"component": "sensor", "state_topic": f"{base}/external_temp_1/state", "name": "External Temperature 1"},  # noqa: E501
-            "external_temp_2": {"component": "sensor", "state_topic": f"{base}/external_temp_2/state", "name": "External Temperature 2"},  # noqa: E501
-            "pressure": {"component": "sensor", "state_topic": f"{base}/pressure/state", "name": "Pressure"},  # noqa: E501
-            "flow_rate": {"component": "sensor", "state_topic": f"{base}/flow_rate/state", "name": "Flow Rate"},  # noqa: E501
-            "shot_timer": {"component": "sensor", "state_topic": f"{base}/shot_timer/state", "name": "Shot Timer"},  # noqa: E501
-            "shot_weight": {"component": "sensor", "state_topic": f"{base}/shot_weight/state", "name": "Shot Weight"},  # noqa: E501
-            "total_shots": {"component": "sensor", "state_topic": f"{base}/total_shots/state", "name": "Total Shots"},  # noqa: E501
-            "active_profile": {"component": "sensor", "state_topic": f"{base}/active_profile/state", "name": "Active Profile"},  # noqa: E501
-            "target_temperature": {"component": "sensor", "state_topic": f"{base}/target_temperature/state", "name": "Target Temperature"},  # noqa: E501
-            "target_weight": {"component": "sensor", "state_topic": f"{base}/target_weight/state", "name": "Target Weight"},  # noqa: E501
-            "firmware_version": {"component": "sensor", "state_topic": f"{base}/firmware_version/state", "name": "Firmware Version"},  # noqa: E501
-            "software_version": {"component": "sensor", "state_topic": f"{base}/software_version/state", "name": "Software Version"},  # noqa: E501
-            "voltage": {"component": "sensor", "state_topic": f"{base}/voltage/state", "name": "Voltage"},  # noqa: E501
-            "sounds_enabled": {"component": "binary_sensor", "state_topic": f"{base}/sounds_enabled/state", "name": "Sounds Enabled"},  # noqa: E501
-            "brightness": {"component": "sensor", "state_topic": f"{base}/brightness/state", "name": "Brightness"},  # noqa: E501
+            "connected": {
+                "component": "binary_sensor",
+                "state_topic": f"{base}/connected/state",
+                "name": "Meticulous Connected",
+            },  # noqa: E501
+            "state": {
+                "component": "sensor",
+                "state_topic": f"{base}/state/state",
+                "name": "Meticulous State",
+            },  # noqa: E501
+            "brewing": {
+                "component": "binary_sensor",
+                "state_topic": f"{base}/brewing/state",
+                "name": "Meticulous Brewing",
+            },  # noqa: E501
+            "boiler_temperature": {
+                "component": "sensor",
+                "state_topic": f"{base}/boiler_temperature/state",
+                "name": "Boiler Temperature",
+            },  # noqa: E501
+            "brew_head_temperature": {
+                "component": "sensor",
+                "state_topic": f"{base}/brew_head_temperature/state",
+                "name": "Brew Head Temperature",
+            },  # noqa: E501
+            "external_temp_1": {
+                "component": "sensor",
+                "state_topic": f"{base}/external_temp_1/state",
+                "name": "External Temperature 1",
+            },  # noqa: E501
+            "external_temp_2": {
+                "component": "sensor",
+                "state_topic": f"{base}/external_temp_2/state",
+                "name": "External Temperature 2",
+            },  # noqa: E501
+            "pressure": {
+                "component": "sensor",
+                "state_topic": f"{base}/pressure/state",
+                "name": "Pressure",
+            },  # noqa: E501
+            "flow_rate": {
+                "component": "sensor",
+                "state_topic": f"{base}/flow_rate/state",
+                "name": "Flow Rate",
+            },  # noqa: E501
+            "shot_timer": {
+                "component": "sensor",
+                "state_topic": f"{base}/shot_timer/state",
+                "name": "Shot Timer",
+            },  # noqa: E501
+            "shot_weight": {
+                "component": "sensor",
+                "state_topic": f"{base}/shot_weight/state",
+                "name": "Shot Weight",
+            },  # noqa: E501
+            "total_shots": {
+                "component": "sensor",
+                "state_topic": f"{base}/total_shots/state",
+                "name": "Total Shots",
+            },  # noqa: E501
+            "active_profile": {
+                "component": "sensor",
+                "state_topic": f"{base}/active_profile/state",
+                "name": "Active Profile",
+            },  # noqa: E501
+            "target_temperature": {
+                "component": "sensor",
+                "state_topic": f"{base}/target_temperature/state",
+                "name": "Target Temperature",
+            },  # noqa: E501
+            "target_weight": {
+                "component": "sensor",
+                "state_topic": f"{base}/target_weight/state",
+                "name": "Target Weight",
+            },  # noqa: E501
+            "firmware_version": {
+                "component": "sensor",
+                "state_topic": f"{base}/firmware_version/state",
+                "name": "Firmware Version",
+            },  # noqa: E501
+            "software_version": {
+                "component": "sensor",
+                "state_topic": f"{base}/software_version/state",
+                "name": "Software Version",
+            },  # noqa: E501
+            "voltage": {
+                "component": "sensor",
+                "state_topic": f"{base}/voltage/state",
+                "name": "Voltage",
+            },  # noqa: E501
+            "sounds_enabled": {
+                "component": "binary_sensor",
+                "state_topic": f"{base}/sounds_enabled/state",
+                "name": "Sounds Enabled",
+            },  # noqa: E501
+            "brightness": {
+                "component": "sensor",
+                "state_topic": f"{base}/brightness/state",
+                "name": "Brightness",
+            },  # noqa: E501
         }
         # fmt: on
 
@@ -395,8 +483,13 @@ class MeticulousAddon:
                 "dev": device,
             }
             # Add device_class / units where appropriate
-            temp_keys = ("boiler_temperature", "brew_head_temperature",
-                         "target_temperature", "external_temp_1", "external_temp_2")
+            temp_keys = (
+                "boiler_temperature",
+                "brew_head_temperature",
+                "target_temperature",
+                "external_temp_1",
+                "external_temp_2",
+            )
             if key in temp_keys:
                 payload["dev_cla"] = "temperature"
                 payload["unit_of_meas"] = "°C"
@@ -432,14 +525,16 @@ class MeticulousAddon:
 
         # Device info (firmware, software, model, serial, voltage)
         if self.device_info:
-            initial_data.update({
-                "firmware_version": self.device_info.firmware,
-                "software_version": self.device_info.software_version,
-                "model": self.device_info.model_version,
-                "serial": self.device_info.serial,
-                "name": self.device_info.name,
-                "voltage": getattr(self.device_info, 'mainVoltage', None),
-            })
+            initial_data.update(
+                {
+                    "firmware_version": self.device_info.firmware,
+                    "software_version": self.device_info.software_version,
+                    "model": self.device_info.model_version,
+                    "serial": self.device_info.serial,
+                    "name": self.device_info.name,
+                    "voltage": getattr(self.device_info, "mainVoltage", None),
+                }
+            )
 
         # Statistics (total shots)
         if self.api:
@@ -460,14 +555,15 @@ class MeticulousAddon:
                 last_profile = await asyncio.get_running_loop().run_in_executor(
                     None, lambda: api.get_last_profile()
                 )
-                if (last_profile and not isinstance(last_profile, APIError) and
-                        hasattr(last_profile, "profile")):
+                if (
+                    last_profile
+                    and not isinstance(last_profile, APIError)
+                    and hasattr(last_profile, "profile")
+                ):
                     profile = last_profile.profile
                     initial_data["active_profile"] = getattr(profile, "name", None)
-                    initial_data["target_temperature"] = getattr(
-                        profile, "temperature", None)
-                    initial_data["target_weight"] = getattr(
-                        profile, "final_weight", None)
+                    initial_data["target_temperature"] = getattr(profile, "temperature", None)
+                    initial_data["target_weight"] = getattr(profile, "final_weight", None)
             except Exception as e:
                 logger.debug(f"Could not fetch initial profile: {e}")
 
@@ -479,8 +575,7 @@ class MeticulousAddon:
                     None, lambda: api.get_settings()
                 )
                 if settings and not isinstance(settings, APIError):
-                    initial_data["sounds_enabled"] = getattr(
-                        settings, "enable_sounds", None)
+                    initial_data["sounds_enabled"] = getattr(settings, "enable_sounds", None)
             except Exception as e:
                 logger.debug(f"Could not fetch initial settings: {e}")
 
@@ -513,11 +608,14 @@ class MeticulousAddon:
         This wrapper produces full key names (state_topic, unique_id, device)
         expected by unit tests, delegating to the internal mapping.
         """
-        mapping = self._mqtt_sensor_mapping().get(key, {
-            "component": "sensor",
-            "state_topic": f"{self.state_prefix}/{key}/state",
-            "name": name,
-        })
+        mapping = self._mqtt_sensor_mapping().get(
+            key,
+            {
+                "component": "sensor",
+                "state_topic": f"{self.state_prefix}/{key}/state",
+                "name": name,
+            },
+        )
         payload: Dict[str, Any] = {
             "name": name,
             "state_topic": mapping["state_topic"],
@@ -549,11 +647,14 @@ class MeticulousAddon:
 
         Produces payload with command_topic and state_topic that align with tests.
         """
-        mapping = self._mqtt_sensor_mapping().get(key, {
-            "component": "switch",
-            "state_topic": f"{self.state_prefix}/{key}/state",
-            "name": name,
-        })
+        mapping = self._mqtt_sensor_mapping().get(
+            key,
+            {
+                "component": "switch",
+                "state_topic": f"{self.state_prefix}/{key}/state",
+                "name": name,
+            },
+        )
         payload: Dict[str, Any] = {
             "name": name,
             "state_topic": mapping["state_topic"],
@@ -605,7 +706,8 @@ class MeticulousAddon:
 
             client.on_connect = on_connect
             client.on_message = lambda client, userdata, msg: mqtt_on_message(
-                self, client, userdata, msg)
+                self, client, userdata, msg
+            )
 
             # Last will marks offline
             client.will_set(self.availability_topic, payload="offline", qos=0, retain=True)
@@ -637,7 +739,7 @@ class MeticulousAddon:
             "model": self.device_info.model_version,
             "serial": self.device_info.serial,
             "name": self.device_info.name,
-            "voltage": getattr(self.device_info, 'mainVoltage', None),
+            "voltage": getattr(self.device_info, "mainVoltage", None),
         }
 
         await self.publish_to_homeassistant(device_data)
@@ -660,10 +762,10 @@ class MeticulousAddon:
             sensors = status.sensors
             if isinstance(sensors, dict):
                 # Convert dict to SensorData if needed
-                pressure = sensors.get('p', 0)
-                flow = sensors.get('f', 0)
-                weight = sensors.get('w', 0)
-                temperature = sensors.get('t', 0)
+                pressure = sensors.get("p", 0)
+                flow = sensors.get("f", 0)
+                weight = sensors.get("w", 0)
+                temperature = sensors.get("t", 0)
             else:
                 pressure = sensors.p
                 flow = sensors.f
@@ -673,7 +775,9 @@ class MeticulousAddon:
             sensor_data = {
                 "state": state,
                 "brewing": status.extracting or False,
-                "shot_timer": status.profile_time / 1000.0 if status.profile_time else 0,  # Convert ms to seconds  # noqa: E501
+                "shot_timer": (
+                    status.profile_time / 1000.0 if status.profile_time else 0
+                ),  # Convert ms to seconds  # noqa: E501
                 "elapsed_time": status.time / 1000.0 if status.time else 0,
                 "pressure": pressure,
                 "flow_rate": flow,
@@ -735,10 +839,7 @@ class MeticulousAddon:
                     self.publish_to_homeassistant(temp_data), self.loop
                 )
 
-            logger.debug(
-                f"Temps: Boiler={t_bar_up:.1f}°C, "
-                f"Brew Head={t_bar_down:.1f}°C"
-            )
+            logger.debug(f"Temps: Boiler={t_bar_up:.1f}°C, " f"Brew Head={t_bar_down:.1f}°C")
 
         except Exception as e:
             logger.error(f"Error handling temperature event: {e}", exc_info=True)
@@ -750,9 +851,7 @@ class MeticulousAddon:
             # Update current profile
             # Fetch full profile details if needed
             if self.loop:
-                asyncio.run_coroutine_threadsafe(
-                    self.update_profile_info(), self.loop
-                )
+                asyncio.run_coroutine_threadsafe(self.update_profile_info(), self.loop)
 
         except Exception as e:
             logger.error(f"Error handling profile event: {e}", exc_info=True)
@@ -802,10 +901,7 @@ class MeticulousAddon:
                 logger.info(f"Updated profile: {last_profile.profile.name}")
 
         except Exception as e:
-            logger.debug(
-                f"Could not retrieve profile (firmware mismatch): "
-                f"{type(e).__name__}"
-            )
+            logger.debug(f"Could not retrieve profile (firmware mismatch): " f"{type(e).__name__}")
 
     async def update_statistics(self):
         """Fetch and update shot statistics."""
@@ -837,8 +933,7 @@ class MeticulousAddon:
                     logger.debug(f"Last shot: {last_shot.name}")
             except Exception as e:
                 logger.debug(
-                    f"Could not retrieve last shot (firmware mismatch): "
-                    f"{type(e).__name__}"
+                    f"Could not retrieve last shot (firmware mismatch): " f"{type(e).__name__}"
                 )
 
         except Exception as e:
@@ -862,10 +957,7 @@ class MeticulousAddon:
                 logger.debug(f"Updated settings: sounds={settings.enable_sounds}")
 
         except Exception as e:
-            logger.debug(
-                f"Could not retrieve settings (firmware mismatch): "
-                f"{type(e).__name__}"
-            )
+            logger.debug(f"Could not retrieve settings (firmware mismatch): " f"{type(e).__name__}")
 
     async def maintain_socket_connection(self):
         """Maintain Socket.IO connection with auto-reconnect."""
@@ -902,6 +994,7 @@ class MeticulousAddon:
                 # Retry MQTT connection if not connected with exponential backoff
                 if self.mqtt_enabled and not self.mqtt_client:
                     import time
+
                     current_time = time.time()
                     if current_time >= self.mqtt_next_retry_time:
                         self.mqtt_connect_attempt += 1
@@ -944,7 +1037,8 @@ class MeticulousAddon:
         self.loop = asyncio.get_running_loop()
         logger.info("Starting Meticulous Espresso Add-on")
         logger.info(
-            f"Configuration: machine_ip={self.machine_ip}, scan_interval={self.scan_interval}s")
+            f"Configuration: machine_ip={self.machine_ip}, scan_interval={self.scan_interval}s"
+        )
         self.running = True
 
         # Create aiohttp session for HA API calls

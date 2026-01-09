@@ -12,4 +12,3 @@ RUN pip3 install --no-cache-dir -r /tmp/requirements.txt
 
 # Copy root filesystem
 COPY rootfs /
-

@@ -431,7 +431,7 @@ automation:
 				data:
 					name: "Shot Quality"
 					message: >
-						{{ states('sensor.meticulous_active_profile') }}: 
+						{{ states('sensor.meticulous_active_profile') }}:
 						{{ states('sensor.meticulous_shot_weight') }}g in {{ states('sensor.meticulous_shot_timer') }}s
 						Rating: {{ states('sensor.meticulous_last_shot_rating') }}
 ```
@@ -459,7 +459,7 @@ automation:
 					title: "☕ Maintenance Time"
 					message: >
 						You've pulled {{ states('sensor.meticulous_total_shots') }} shots!
-						
+
 						Suggested maintenance:
 						- Clean the chamber and piston
 						- Wipe down the brew head
@@ -823,7 +823,7 @@ automation:
 				data:
 					value: >
 						{{ states('input_text.todays_shots_log') }}
-						{{ now().strftime('%H:%M') }}: {{ states('sensor.meticulous_shot_weight') }}g | 
+						{{ now().strftime('%H:%M') }}: {{ states('sensor.meticulous_shot_weight') }}g |
 
 	- id: clear_shot_log
 		alias: "Meticulous: Clear Shot Log"
@@ -860,7 +860,7 @@ cards:
 				name: "Active Profile"
 			- entity: binary_sensor.meticulous_connected
 				name: "Connection"
-  
+
 	# Control Buttons
 	- type: horizontal-stack
 		cards:
@@ -882,13 +882,13 @@ cards:
 				tap_action:
 					action: call-service
 					service: meticulous.stop_brew
-  
+
 	# Profile Selector
 	- type: entities
 		title: "Profile"
 		entities:
 			- entity: input_select.meticulous_profile
-  
+
 	# Live Brewing (conditional)
 	- type: conditional
 		conditions:
@@ -906,7 +906,7 @@ cards:
 					name: "Flow"
 				- entity: sensor.meticulous_shot_weight
 					name: "Weight"
-  
+
 	# Statistics Card
 	- type: entities
 		title: "Statistics"
@@ -954,4 +954,3 @@ cards:
 - Lovelace Cards: https://www.home-assistant.io/lovelace/
 - Meticulous Official Site: https://meticulous.coffee/
 - Meticulous Discord Community: [Link to be added]
-

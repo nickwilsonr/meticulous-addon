@@ -1,4 +1,5 @@
 """Unit tests for MQTT command handlers."""
+
 import json
 import os
 import sys
@@ -8,24 +9,21 @@ from unittest.mock import Mock
 from meticulous.api_types import ActionType, APIError
 
 # Add project directory to path
-sys.path.insert(
-    0,
-    os.path.join(os.path.dirname(__file__), '..', 'rootfs', 'usr', 'bin')
-)
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "rootfs", "usr", "bin"))
 
 # These imports will show as unresolved but work at runtime
 # due to dynamic path manipulation above
 # pyright: reportMissingImports=false
 from mqtt_commands import (  # noqa: E402  # type: ignore
-    mqtt_on_message,
+    handle_command_continue_brew,
+    handle_command_enable_sounds,
+    handle_command_load_profile,
+    handle_command_preheat,
+    handle_command_set_brightness,
     handle_command_start_brew,
     handle_command_stop_brew,
-    handle_command_continue_brew,
-    handle_command_preheat,
     handle_command_tare_scale,
-    handle_command_load_profile,
-    handle_command_set_brightness,
-    handle_command_enable_sounds,
+    mqtt_on_message,
 )
 
 
@@ -69,17 +67,13 @@ class TestMQTTCommands(unittest.TestCase):
         """Test successful continue_brew command."""
         self.addon.api.execute_action.return_value = {"success": True}
         handle_command_continue_brew(self.addon)
-        self.addon.api.execute_action.assert_called_once_with(
-            ActionType.CONTINUE
-        )
+        self.addon.api.execute_action.assert_called_once_with(ActionType.CONTINUE)
 
     def test_preheat_success(self):
         """Test successful preheat command."""
         self.addon.api.execute_action.return_value = {"success": True}
         handle_command_preheat(self.addon)
-        self.addon.api.execute_action.assert_called_once_with(
-            ActionType.PREHEAT
-        )
+        self.addon.api.execute_action.assert_called_once_with(ActionType.PREHEAT)
 
     def test_tare_scale_success(self):
         """Test successful tare_scale command."""
@@ -110,11 +104,7 @@ class TestMQTTCommands(unittest.TestCase):
     def test_set_brightness_json_payload(self):
         """Test set_brightness with JSON payload."""
         self.addon.api.set_brightness.return_value = {"success": True}
-        payload = json.dumps({
-            "brightness": 50,
-            "interpolation": "linear",
-            "animation_time": 1000
-        })
+        payload = json.dumps({"brightness": 50, "interpolation": "linear", "animation_time": 1000})
         handle_command_set_brightness(self.addon, payload)
         self.addon.api.set_brightness.assert_called_once()
         args = self.addon.api.set_brightness.call_args[0][0]

@@ -41,7 +41,7 @@ Integrate your Meticulous Espresso machine with Home Assistant for real-time mon
 
 ### Required Settings
 
-**`machine_ip`** (required)  
+**`machine_ip`** (required)
 The IP address or hostname of your Meticulous machine on your local network.
 
 Example:
@@ -53,34 +53,25 @@ machine_ip: "meticulous.local"
 
 ### Optional Settings
 
-**`scan_interval`** (default: 30)  
+**`scan_interval`** (default: 30)
 How often (in seconds) to poll for statistics and device info. Range: 10-300.
 
-**`log_level`** (default: "info")  
-Logging verbosity: `debug`, `info`, `warning`, or `error`.
-
-**`retry_initial`** (default: 2)  
-Initial delay (seconds) before first reconnection attempt.
-
-**`retry_max`** (default: 60)  
-Maximum delay (seconds) between reconnection attempts.
-
-**`retry_jitter`** (default: true)  
-Add 0-20% randomness to retry delays (prevents simultaneous reconnects).
+**`debug`** (default: false)
+Enable debug logging for detailed troubleshooting.
 
 ### MQTT Settings
 
-**`mqtt_enabled`** (default: true)  
+**`mqtt_enabled`** (default: true)
 Enable MQTT discovery (requires MQTT broker like Mosquitto).
 
-**`mqtt_host`** (default: "core-mosquitto")  
+**`mqtt_host`** (default: "core-mosquitto")
 MQTT broker hostname.
 
-**`mqtt_port`** (default: 1883)  
+**`mqtt_port`** (default: 1883)
 MQTT broker port.
 
-**`mqtt_username`** / **`mqtt_password`** (optional)  
-MQTT credentials if required by your broker.
+**`mqtt_username`** / **`mqtt_password`** (optional)
+MQTT credentials if required by your broker. These are automatically fetched from the Home Assistant MQTT integration when available, so you typically don't need to configure them manually.
 
 ---
 
@@ -149,7 +140,6 @@ For more examples, see [docs/automations.md](docs/automations.md).
 **Connection keeps dropping:**
 - Check network stability between Home Assistant and machine
 - Verify machine firmware is up to date
-- Increase `retry_max` if network is slow
 
 **Entities not appearing:**
 - Ensure `mqtt_enabled` is `true`
@@ -172,10 +162,10 @@ For more examples, see [docs/automations.md](docs/automations.md).
 
 ## Support
 
-**Issues & Feature Requests:**  
+**Issues & Feature Requests:**
 https://github.com/nickwilsonr/meticulous-addon/issues
 
-**Developer Info:**  
+**Developer Info:**
 See [docs/CONTRIBUTING.md](docs/CONTRIBUTING.md) if you want to contribute code or report technical issues.
 
 ---

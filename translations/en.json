@@ -2,28 +2,16 @@
   "configuration": {
     "machine_ip": {
       "name": "Machine IP Address",
-      "description": "The IP address of your Meticulous Espresso machine on your local network"
+      "description": "The IP address or hostname of your Meticulous Espresso machine (e.g., 192.168.1.100 or meticulous.local)"
     },
     "scan_interval": {
       "name": "Scan Interval",
       "description": "How often to poll the machine for updates (in seconds)"
     },
-    "log_level": {
-      "name": "Log Level",
-      "description": "Minimum log level to display"
+    "debug": {
+      "name": "Debug Mode",
+      "description": "Enable detailed debug logging for troubleshooting"
     },
-    "retry_initial": {
-      "name": "Retry Initial Delay",
-      "description": "Initial backoff delay (seconds) for reconnect attempts"
-    },
-    "retry_max": {
-      "name": "Retry Max Delay",
-      "description": "Maximum backoff delay (seconds) for reconnect attempts"
-    },
-    "retry_jitter": {
-      "name": "Retry Jitter",
-      "description": "Enable random jitter in backoff to avoid thundering herd"
-    }
     "mqtt_enabled": {
       "name": "Enable MQTT",
       "description": "Publish sensors via MQTT discovery (recommended)"
@@ -38,11 +26,11 @@
     },
     "mqtt_username": {
       "name": "MQTT Username",
-      "description": "Optional username for MQTT broker"
+      "description": "Optional username for MQTT broker (auto-detected from HA MQTT integration)"
     },
     "mqtt_password": {
       "name": "MQTT Password",
-      "description": "Optional password for MQTT broker"
+      "description": "Optional password for MQTT broker (auto-detected from HA MQTT integration)"
     }
   }
 }

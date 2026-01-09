@@ -1,0 +1,33 @@
+repos:
+  - repo: https://github.com/psf/black
+    rev: 24.1.1
+    hooks:
+      - id: black
+        files: ^rootfs/.*\.py$|^tests/.*\.py$
+
+  - repo: https://github.com/pycqa/flake8
+    rev: 7.0.0
+    hooks:
+      - id: flake8
+        files: ^rootfs/.*\.py$|^tests/.*\.py$
+        args: ['--config=.flake8']
+
+  - repo: https://github.com/pycqa/isort
+    rev: 5.13.2
+    hooks:
+      - id: isort
+        files: ^rootfs/.*\.py$|^tests/.*\.py$
+        args: ['--profile', 'black']
+
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.5.0
+    hooks:
+      - id: trailing-whitespace
+      - id: end-of-file-fixer
+      - id: check-yaml
+      - id: check-added-large-files
+      - id: check-json
+      - id: mixed-line-ending
+
+default_language_version:
+  python: python3
