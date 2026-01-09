@@ -35,6 +35,7 @@
   },
   "ports": {},
   "ports_description": {},
+  "network": true,
   "homeassistant_api": true,
   "hassio_api": true,
   "hassio_role": "default",
