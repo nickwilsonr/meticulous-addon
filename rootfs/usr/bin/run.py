@@ -209,12 +209,12 @@ class MeticulousAddon:
 
                 class PlaceholderDeviceInfo:
                     def __init__(self):
-                        self.name = "Unknown"
-                        self.model = "Unknown"
-                        self.serial = "Unknown"
-                        self.firmware = "Unknown"
-                        self.software_version = "Unknown"
-                        self.model_version = "0.0.0"
+                        self.name = "Meticulous Espresso"
+                        self.model = "Meticulous Espresso"
+                        self.serial = "meticulous_espresso"
+                        self.firmware = "unknown"
+                        self.software_version = "unknown"
+                        self.model_version = "Meticulous"
 
                 device_info = PlaceholderDeviceInfo()
 
@@ -410,10 +410,35 @@ class MeticulousAddon:
                 "state_topic": f"{base}/total_shots/state",
                 "name": "Total Shots",
             },  # noqa: E501
+            "last_shot_name": {
+                "component": "sensor",
+                "state_topic": f"{base}/last_shot_name/state",
+                "name": "Last Shot Name",
+            },  # noqa: E501
+            "last_shot_profile": {
+                "component": "sensor",
+                "state_topic": f"{base}/last_shot_profile/state",
+                "name": "Last Shot Profile",
+            },  # noqa: E501
+            "last_shot_rating": {
+                "component": "sensor",
+                "state_topic": f"{base}/last_shot_rating/state",
+                "name": "Last Shot Rating",
+            },  # noqa: E501
+            "last_shot_time": {
+                "component": "sensor",
+                "state_topic": f"{base}/last_shot_time/state",
+                "name": "Last Shot Time",
+            },  # noqa: E501
             "active_profile": {
                 "component": "sensor",
                 "state_topic": f"{base}/active_profile/state",
                 "name": "Active Profile",
+            },  # noqa: E501
+            "profile_author": {
+                "component": "sensor",
+                "state_topic": f"{base}/profile_author/state",
+                "name": "Profile Author",
             },  # noqa: E501
             "target_temperature": {
                 "component": "sensor",
@@ -545,6 +570,26 @@ class MeticulousAddon:
                 )
                 if stats and not isinstance(stats, APIError):
                     initial_data["total_shots"] = stats.totalSavedShots
+
+                # Also get last shot info
+                try:
+                    last_shot = api.get_last_shot()
+                    if last_shot and not isinstance(last_shot, APIError):
+                        initial_data["last_shot_name"] = getattr(last_shot, "name", None)
+                        if hasattr(last_shot, "profile"):
+                            initial_data["last_shot_profile"] = getattr(
+                                last_shot.profile, "name", None
+                            )
+                        else:
+                            initial_data["last_shot_profile"] = None
+                        initial_data["last_shot_rating"] = (
+                            getattr(last_shot, "rating", None) or "none"
+                        )
+                        if hasattr(last_shot, "time") and last_shot.time:
+                            shot_time = datetime.fromtimestamp(last_shot.time)
+                            initial_data["last_shot_time"] = shot_time.isoformat()
+                except Exception as e:
+                    logger.debug(f"Could not fetch initial last shot: {e}")
             except Exception as e:
                 logger.debug(f"Could not fetch initial statistics: {e}")
 
@@ -562,6 +607,7 @@ class MeticulousAddon:
                 ):
                     profile = last_profile.profile
                     initial_data["active_profile"] = getattr(profile, "name", None)
+                    initial_data["profile_author"] = getattr(profile, "author", None)
                     initial_data["target_temperature"] = getattr(profile, "temperature", None)
                     initial_data["target_weight"] = getattr(profile, "final_weight", None)
             except Exception as e:
@@ -578,6 +624,9 @@ class MeticulousAddon:
                     initial_data["sounds_enabled"] = getattr(settings, "enable_sounds", None)
             except Exception as e:
                 logger.debug(f"Could not fetch initial settings: {e}")
+
+        # Note: Status (state, sensors, brewing) and temperatures only available via Socket.IO
+        # These will be populated by real-time events after connection
 
         # Connectivity state
         initial_data["connected"] = self.socket_connected

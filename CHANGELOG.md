@@ -2,6 +2,21 @@
 
 All notable user-facing changes to this add-on are documented here.
 
+## [0.3.6] - 2026-01-09
+
+### ✨ Improvements
+- **More sensors available immediately** - Profile author and last shot details (name, profile, rating, time) now appear as soon as the add-on starts
+- **Better sensor coverage** - Added 5 new sensors that were missing from MQTT discovery
+- **Smarter startup** - The add-on now fetches all available sensor data at startup instead of waiting for updates
+
+### 🐛 Bug Fixes
+- Fixed sensors that would show "unknown" until the machine was actively used
+- Corrected sensor discovery to match documented sensor list
+
+### 📝 Note
+- Some sensors (pressure, flow, temperatures) only update when the machine is actively brewing, as they're only available via real-time Socket.IO events
+- Brightness sensor will show "unknown" until explicitly set (API limitation)
+
 ## [0.3.5] - 2026-01-09
 
 ### 🐛 Bug Fixes

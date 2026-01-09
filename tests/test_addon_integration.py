@@ -23,7 +23,11 @@ class TestConfigLoading(unittest.TestCase):
     def test_load_config_from_options_json(self, mock_open, mock_exists):
         """Test loading config from /data/options.json."""
         mock_exists.return_value = True
-        test_config = {"machine_ip": "192.168.1.100", "scan_interval": 30, "log_level": "info"}
+        test_config = {
+            "machine_ip": "192.168.1.100",
+            "scan_interval": 30,
+            "debug": True,
+        }
         mock_read = mock_open.return_value.__enter__.return_value.read
         mock_read.return_value = json.dumps(test_config)
 
