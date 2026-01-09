@@ -1,5 +1,5 @@
 ---
-version: 0.2.28
+version: 0.2.29
 slug: meticulous_espresso
 name: Meticulous Espresso
 description: Integration for Meticulous Espresso machines with local API support
