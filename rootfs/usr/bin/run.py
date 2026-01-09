@@ -823,11 +823,6 @@ class MeticulousAddon:
 
     def _handle_status_event(self, status: StatusData):
         """Handle real-time status updates from Socket.IO."""
-        logger.debug(
-            f"Status event received: state={status.state}, "
-            f"extracting={status.extracting}, "
-            f"profile={status.loaded_profile}"
-        )
         try:
             # Extract state
             state = status.state or "unknown"
@@ -899,7 +894,6 @@ class MeticulousAddon:
 
     def _handle_temperature_event(self, temps: Temperatures):
         """Handle real-time temperature updates from Socket.IO."""
-        logger.debug("Temperature event received")
         try:
             # Handle both dict and object types
             if isinstance(temps, dict):
@@ -949,7 +943,6 @@ class MeticulousAddon:
 
     def _handle_notification_event(self, notification: NotificationData):
         """Handle machine notifications from Socket.IO."""
-        logger.debug("Notification event received")
         try:
             logger.warning(f"Machine notification: {notification.message}")
 
