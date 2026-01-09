@@ -10,7 +10,7 @@ arch:
 startup: application
 boot: auto
 init: false
-apparmor: true
+apparmor: false
 services:
   - mqtt:need
 homeassistant_api: true
