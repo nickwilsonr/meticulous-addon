@@ -190,7 +190,24 @@ class MeticulousAddon:
                 onTemperatureSensors=self._handle_temperature_event,
                 onProfileChange=self._handle_profile_event,
                 onNotification=self._handle_notification_event,
+                onButton=self._handle_button_event,
+                onSettingsChange=self._handle_settings_change_event,
+                onCommunication=self._handle_communication_event,
+                onActuators=self._handle_actuators_event,
+                onMachineInfo=self._handle_machine_info_event,
             )
+
+            # Log handler setup for debugging
+            logger.info("Socket.IO handlers configured:")
+            logger.info(f"  - onStatus: {self._handle_status_event}")
+            logger.info(f"  - onTemperatureSensors: {self._handle_temperature_event}")
+            logger.info(f"  - onProfileChange: {self._handle_profile_event}")
+            logger.info(f"  - onNotification: {self._handle_notification_event}")
+            logger.info(f"  - onButton: {self._handle_button_event}")
+            logger.info(f"  - onSettingsChange: {self._handle_settings_change_event}")
+            logger.info(f"  - onCommunication: {self._handle_communication_event}")
+            logger.info(f"  - onActuators: {self._handle_actuators_event}")
+            logger.info(f"  - onMachineInfo: {self._handle_machine_info_event}")
 
             # Initialize API
             self.api = Api(base_url=base_url, options=options)  # type: ignore[assignment]
@@ -227,10 +244,15 @@ class MeticulousAddon:
 
             # Connect Socket.IO for real-time updates
             try:
+                logger.info("Connecting to Socket.IO...")
                 self.api.connect_to_socket()
                 self.socket_connected = True
                 self.api_connected = True
                 logger.info("Socket.IO connected - real-time updates enabled")
+                logger.info(
+                    "Event handlers registered: onStatus, onTemperatureSensors, "
+                    "onProfileChange, onNotification, onButton, onSettingsChange"
+                )
             except Exception as e:
                 self.socket_connected = False
                 self.api_connected = True  # REST works, socket failed
@@ -801,6 +823,7 @@ class MeticulousAddon:
 
     def _handle_status_event(self, status: StatusData):
         """Handle real-time status updates from Socket.IO."""
+        logger.debug(f"Status event received: state={status.state}, extracting={status.extracting}")
         try:
             # Extract state
             state = status.state or "unknown"
@@ -862,6 +885,7 @@ class MeticulousAddon:
 
     def _handle_temperature_event(self, temps: Temperatures):
         """Handle real-time temperature updates from Socket.IO."""
+        logger.debug("Temperature event received")
         try:
             # Handle both dict and object types
             if isinstance(temps, dict):
@@ -911,6 +935,7 @@ class MeticulousAddon:
 
     def _handle_notification_event(self, notification: NotificationData):
         """Handle machine notifications from Socket.IO."""
+        logger.debug("Notification event received")
         try:
             logger.warning(f"Machine notification: {notification.message}")
 
@@ -928,6 +953,34 @@ class MeticulousAddon:
 
         except Exception as e:
             logger.error(f"Error handling notification event: {e}", exc_info=True)
+
+    def _handle_button_event(self, button: Any):
+        """Handle button events from Socket.IO (e.g., tare button)."""
+        logger.info(f"Button event received: {button}")
+        # Button events could trigger updates or actions
+        # For now, just log them to understand what events come through
+
+    def _handle_settings_change_event(self, settings: Dict):
+        """Handle settings change events from Socket.IO (e.g., brightness)."""
+        logger.info(f"Settings change event received: {settings}")
+        # This should capture brightness changes and other settings updates
+        if self.loop:
+            asyncio.run_coroutine_threadsafe(self.publish_to_homeassistant(settings), self.loop)
+
+    def _handle_communication_event(self, comm: Any):
+        """Handle communication events from Socket.IO."""
+        logger.debug(f"Communication event received: {comm}")
+        # Log these for debugging but they may not be user-relevant
+
+    def _handle_actuators_event(self, actuators: Any):
+        """Handle actuator events from Socket.IO."""
+        logger.debug(f"Actuators event received: {actuators}")
+        # This might include pump, valve states, etc.
+
+    def _handle_machine_info_event(self, info: Any):
+        """Handle machine info events from Socket.IO."""
+        logger.debug(f"Machine info event received: {info}")
+        # Device/firmware info updates
 
     # =========================================================================
     # Polling Updates (for non-real-time data)
