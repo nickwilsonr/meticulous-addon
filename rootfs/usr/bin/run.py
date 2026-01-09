@@ -682,17 +682,23 @@ class MeticulousAddon:
                 logger.debug(f"Updated statistics: {stats.totalSavedShots} total shots")
 
             # Also get last shot info
-            last_shot = self.api.get_last_shot()
-            if last_shot and not isinstance(last_shot, APIError):
-                last_shot_data = {
-                    "last_shot_name": last_shot.name,
-                    "last_shot_profile": last_shot.profile.name,
-                    "last_shot_rating": last_shot.rating or "none",
-                    "last_shot_time": datetime.fromtimestamp(last_shot.time).isoformat(),
-                }
+            try:
+                last_shot = self.api.get_last_shot()
+                if last_shot and not isinstance(last_shot, APIError):
+                    last_shot_data = {
+                        "last_shot_name": last_shot.name,
+                        "last_shot_profile": last_shot.profile.name,
+                        "last_shot_rating": last_shot.rating or "none",
+                        "last_shot_time": datetime.fromtimestamp(last_shot.time).isoformat(),
+                    }
 
-                await self.publish_to_homeassistant(last_shot_data)
-                logger.debug(f"Last shot: {last_shot.name}")
+                    await self.publish_to_homeassistant(last_shot_data)
+                    logger.debug(f"Last shot: {last_shot.name}")
+            except Exception as e:
+                logger.debug(
+                    f"Could not retrieve last shot (firmware mismatch): "
+                    f"{type(e).__name__}"
+                )
 
         except Exception as e:
             logger.error(f"Error updating statistics: {e}", exc_info=True)
