@@ -1,6 +1,6 @@
 {
   "name": "Meticulous Espresso",
-  "version": "0.2.4",
+  "version": "0.2.5",
   "slug": "meticulous_espresso",
   "description": "Integration for Meticulous Espresso machines with local API support",
   "arch": ["aarch64", "amd64"],
