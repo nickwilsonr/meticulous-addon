@@ -4,8 +4,7 @@ FROM $BUILD_FROM
 # Install requirements for add-on
 RUN apk add --no-cache python3 py3-pip
 
-# Increase S6 overlay verbosity to aid troubleshooting
-ENV S6_VERBOSITY=2
+# Use default S6 overlay verbosity for normal operation
 
 # Copy data for add-on
 COPY requirements.txt /tmp/

@@ -14,7 +14,7 @@ import json as jsonlib
 
 # Import Meticulous API
 try:
-    from meticulous.api import Api
+    from meticulous.api import Api, ApiOptions
     from meticulous.api_types import (
         StatusData,
         Temperatures,
@@ -115,9 +115,26 @@ class MeticulousAddon:
             return {}
 
     def _setup_logging(self):
-        """Configure logging based on user settings."""
-        log_level = self.config.get("log_level", "info").upper()
-        logger.setLevel(getattr(logging, log_level, logging.INFO))
+        """Configure logging based on user settings.
+
+        Prefer a simple boolean 'debug' switch; fallback to legacy 'log_level'.
+        Also adjust the root logger handler level so DEBUG messages are emitted
+        when requested.
+        """
+        level: int
+        if "debug" in self.config:
+            level = logging.DEBUG if bool(self.config.get("debug")) else logging.INFO
+        else:
+            # Legacy support
+            log_level = str(self.config.get("log_level", "info")).upper()
+            level = getattr(logging, log_level, logging.INFO)
+
+        # Apply level to root and module logger/handlers
+        root_logger = logging.getLogger()
+        root_logger.setLevel(level)
+        for h in root_logger.handlers:
+            h.setLevel(level)
+        logger.setLevel(level)
 
     async def connect_to_machine(self) -> bool:
         """Connect to the Meticulous Espresso machine and setup Socket.IO."""
@@ -131,13 +148,13 @@ class MeticulousAddon:
             # Build base URL
             base_url = f"http://{self.machine_ip}:8080/"
 
-            # Setup event handlers for Socket.IO
-            options = {
-                "onStatus": self._handle_status_event,
-                "onTemperatureSensors": self._handle_temperature_event,
-                "onProfileChange": self._handle_profile_event,
-                "onNotification": self._handle_notification_event,
-            }
+            # Setup event handlers for Socket.IO using ApiOptions
+            options = ApiOptions(
+                onStatus=self._handle_status_event,
+                onTemperatureSensors=self._handle_temperature_event,
+                onProfileChange=self._handle_profile_event,
+                onNotification=self._handle_notification_event,
+            )
 
             # Initialize API
             self.api = Api(base_url=base_url, options=options)
