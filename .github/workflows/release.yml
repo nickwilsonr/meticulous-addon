@@ -17,6 +17,8 @@ jobs:
     permissions:
       contents: read
       packages: write
+    env:
+      GHCR_TOKEN: ${{ secrets.GHCR_TOKEN }}
     strategy:
       fail-fast: false
       matrix:
@@ -70,9 +72,9 @@ jobs:
           cache-to: type=registry,ref=ghcr.io/nickwilsonr/${{ matrix.arch }}-meticulous-addon:buildcache,mode=max
 
       - name: Make GHCR package public
-        if: ${{ secrets.GHCR_TOKEN }}
+        if: ${{ env.GHCR_TOKEN != '' }}
         env:
-          GH_TOKEN: ${{ secrets.GHCR_TOKEN }}
+          GH_TOKEN: ${{ env.GHCR_TOKEN }}
         run: |
           echo "Setting visibility=public for ${{ matrix.arch }}-meticulous-addon"
           gh api -X PUT /user/packages/container/${{ matrix.arch }}-meticulous-addon/visibility -f visibility=public
