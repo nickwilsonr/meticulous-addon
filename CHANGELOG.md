@@ -1,3 +1,12 @@
+## [0.2.2] - 2026-01-08
+
+### Fixed
+- Release workflow visibility step now uses GitHub REST API via `curl` to set GHCR packages public.
+- Limited builds to `amd64` and `aarch64` to match Supervisor-supported platforms.
+
+### Changed
+- Add-on manifest `arch` updated to only `aarch64` and `amd64`.
+
 # Changelog
 
 All notable changes to this project will be documented in this file.

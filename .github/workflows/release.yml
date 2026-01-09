@@ -77,4 +77,8 @@ jobs:
           GH_TOKEN: ${{ env.GHCR_TOKEN }}
         run: |
           echo "Setting visibility=public for ${{ matrix.arch }}-meticulous-addon"
-          gh api -X PUT /user/packages/container/${{ matrix.arch }}-meticulous-addon/visibility -f visibility=public
+          curl -s -X PUT \
+            -H "Authorization: Bearer $GH_TOKEN" \
+            -H "Accept: application/vnd.github+json" \
+            https://api.github.com/user/packages/container/${{ matrix.arch }}-meticulous-addon/visibility \
+            -d '{"visibility":"public"}'
