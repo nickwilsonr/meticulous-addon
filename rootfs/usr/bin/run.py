@@ -325,10 +325,13 @@ class MeticulousAddon:
             "brewing": {"component": "binary_sensor", "state_topic": f"{base}/brewing/state", "name": "Meticulous Brewing"},  # noqa: E501
             "boiler_temperature": {"component": "sensor", "state_topic": f"{base}/boiler_temperature/state", "name": "Boiler Temperature"},  # noqa: E501
             "brew_head_temperature": {"component": "sensor", "state_topic": f"{base}/brew_head_temperature/state", "name": "Brew Head Temperature"},  # noqa: E501
+            "external_temp_1": {"component": "sensor", "state_topic": f"{base}/external_temp_1/state", "name": "External Temperature 1"},  # noqa: E501
+            "external_temp_2": {"component": "sensor", "state_topic": f"{base}/external_temp_2/state", "name": "External Temperature 2"},  # noqa: E501
             "pressure": {"component": "sensor", "state_topic": f"{base}/pressure/state", "name": "Pressure"},  # noqa: E501
             "flow_rate": {"component": "sensor", "state_topic": f"{base}/flow_rate/state", "name": "Flow Rate"},  # noqa: E501
             "shot_timer": {"component": "sensor", "state_topic": f"{base}/shot_timer/state", "name": "Shot Timer"},  # noqa: E501
             "shot_weight": {"component": "sensor", "state_topic": f"{base}/shot_weight/state", "name": "Shot Weight"},  # noqa: E501
+            "total_shots": {"component": "sensor", "state_topic": f"{base}/total_shots/state", "name": "Total Shots"},  # noqa: E501
             "active_profile": {"component": "sensor", "state_topic": f"{base}/active_profile/state", "name": "Active Profile"},  # noqa: E501
             "target_temperature": {"component": "sensor", "state_topic": f"{base}/target_temperature/state", "name": "Target Temperature"},  # noqa: E501
             "target_weight": {"component": "sensor", "state_topic": f"{base}/target_weight/state", "name": "Target Weight"},  # noqa: E501
@@ -370,7 +373,9 @@ class MeticulousAddon:
                 "dev": device,
             }
             # Add device_class / units where appropriate
-            if key in ("boiler_temperature", "brew_head_temperature", "target_temperature"):
+            temp_keys = ("boiler_temperature", "brew_head_temperature",
+                         "target_temperature", "external_temp_1", "external_temp_2")
+            if key in temp_keys:
                 payload["dev_cla"] = "temperature"
                 payload["unit_of_meas"] = "°C"
             elif key == "pressure":
@@ -388,6 +393,80 @@ class MeticulousAddon:
             # Publish discovery config
             self.mqtt_client.publish(config_topic, jsonlib.dumps(payload), qos=0, retain=True)
         logger.info(f"Published {len(self._mqtt_sensor_mapping())} MQTT discovery messages")
+
+    async def _mqtt_publish_initial_state(self) -> None:
+        """Fetch and publish initial state of all sensors (T0 snapshot).
+
+        This creates entities in Home Assistant immediately by providing
+        the first state message for all sensors, rather than waiting for
+        Socket.IO updates which may be infrequent or never occur for some.
+        """
+        if not (self.mqtt_enabled and self.mqtt_client):
+            return
+
+        logger.debug("Fetching initial sensor state (T0 snapshot)")
+        initial_data = {}
+
+        # Device info (firmware, software, model, serial, voltage)
+        if self.device_info:
+            initial_data.update({
+                "firmware_version": self.device_info.firmware,
+                "software_version": self.device_info.software_version,
+                "model": self.device_info.model_version,
+                "serial": self.device_info.serial,
+                "name": self.device_info.name,
+                "voltage": getattr(self.device_info, 'mainVoltage', None),
+            })
+
+        # Statistics (total shots)
+        if self.api:
+            try:
+                api = self.api  # Capture reference to satisfy type checker
+                stats = await asyncio.get_running_loop().run_in_executor(
+                    None, lambda: api.get_history_statistics()
+                )
+                if stats and not isinstance(stats, APIError):
+                    initial_data["total_shots"] = stats.totalSavedShots
+            except Exception as e:
+                logger.debug(f"Could not fetch initial statistics: {e}")
+
+        # Profile info (active profile, target temp/weight)
+        if self.api:
+            try:
+                api = self.api  # Capture reference to satisfy type checker
+                last_profile = await asyncio.get_running_loop().run_in_executor(
+                    None, lambda: api.get_last_profile()
+                )
+                if (last_profile and not isinstance(last_profile, APIError) and
+                        hasattr(last_profile, "profile")):
+                    profile = last_profile.profile
+                    initial_data["active_profile"] = getattr(profile, "name", None)
+                    initial_data["target_temperature"] = getattr(
+                        profile, "temperature", None)
+                    initial_data["target_weight"] = getattr(
+                        profile, "final_weight", None)
+            except Exception as e:
+                logger.debug(f"Could not fetch initial profile: {e}")
+
+        # Settings (sounds enabled)
+        if self.api:
+            try:
+                api = self.api  # Capture reference to satisfy type checker
+                settings = await asyncio.get_running_loop().run_in_executor(
+                    None, lambda: api.get_settings()
+                )
+                if settings and not isinstance(settings, APIError):
+                    initial_data["sounds_enabled"] = getattr(
+                        settings, "enable_sounds", None)
+            except Exception as e:
+                logger.debug(f"Could not fetch initial settings: {e}")
+
+        # Connectivity state
+        initial_data["connected"] = self.socket_connected
+
+        # Publish all available initial state
+        await self.publish_to_homeassistant(initial_data)
+        logger.info(f"Published initial state for {len(initial_data)} sensors")
 
     # ---------------------------------------------------------------------
     # Test-facing helpers (wrappers) for discovery and backoff
@@ -490,6 +569,12 @@ class MeticulousAddon:
             self.mqtt_client = client
             # Publish discovery once connected
             self._mqtt_publish_discovery()
+            # Fetch and publish initial sensor state (T0 snapshot)
+            # Schedule async call from sync context
+            if self.loop:
+                asyncio.run_coroutine_threadsafe(
+                    self._mqtt_publish_initial_state(), self.loop
+                )
             logger.info(f"MQTT connected to {self.mqtt_host}:{self.mqtt_port}")
             self.mqtt_last_failed = False  # Reset failure flag on success
         except Exception as e:

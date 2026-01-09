@@ -2,6 +2,15 @@
 
 All notable user-facing changes to this add-on are documented here.
 
+## [0.3.3] - 2026-01-09
+
+### ✨ Features
+- All sensors now publish initial state on startup (T0 snapshot)
+- All entities appear immediately in Home Assistant instead of waiting for updates
+
+### 🐛 Bug Fixes
+- Fixed missing sensor mappings (external temperatures, total shots now visible)
+
 ## [0.3.2] - 2026-01-09
 
 ### 🐛 Bug Fixes
