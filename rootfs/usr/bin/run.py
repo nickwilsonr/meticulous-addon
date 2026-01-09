@@ -664,7 +664,10 @@ class MeticulousAddon:
                 logger.info(f"Updated profile: {last_profile.profile.name}")
 
         except Exception as e:
-            logger.error(f"Error updating profile info: {e}", exc_info=True)
+            logger.debug(
+                f"Could not retrieve profile (firmware mismatch): "
+                f"{type(e).__name__}"
+            )
 
     async def update_statistics(self):
         """Fetch and update shot statistics."""
@@ -721,7 +724,10 @@ class MeticulousAddon:
                 logger.debug(f"Updated settings: sounds={settings.enable_sounds}")
 
         except Exception as e:
-            logger.error(f"Error updating settings: {e}", exc_info=True)
+            logger.debug(
+                f"Could not retrieve settings (firmware mismatch): "
+                f"{type(e).__name__}"
+            )
 
     async def maintain_socket_connection(self):
         """Maintain Socket.IO connection with auto-reconnect."""
