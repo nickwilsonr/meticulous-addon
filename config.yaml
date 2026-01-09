@@ -1,5 +1,5 @@
 ---
-version: 0.2.27
+version: 0.2.28
 slug: meticulous_espresso
 name: Meticulous Espresso
 description: Integration for Meticulous Espresso machines with local API support
@@ -20,12 +20,9 @@ ingress: false
 panel_icon: mdi:coffee-maker
 image: ghcr.io/nickwilsonr/{arch}-meticulous-addon
 options:
-  machine_ip: ""
+  machine_ip: "example: 192.168.1.100 or meticulous.local"
   scan_interval: 30
-  log_level: info
-  retry_initial: 2
-  retry_max: 60
-  retry_jitter: true
+  debug: false
   mqtt_enabled: true
   mqtt_host: core-mosquitto
   mqtt_port: 1883
@@ -34,12 +31,9 @@ options:
 schema:
   machine_ip: str?
   scan_interval: int(10,300)
-  log_level: "list(debug|info|warning|error)?"
-  retry_initial: "int(1,30)?"
-  retry_max: "int(30,600)?"
-  retry_jitter: bool?
+  debug: bool?
   mqtt_enabled: bool?
   mqtt_host: str?
-  mqtt_port: "int(1,65535)?"
+  mqtt_port: int(1,65535)?
   mqtt_username: str?
-  mqtt_password: str?
+  mqtt_password: password?
