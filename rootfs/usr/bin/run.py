@@ -170,16 +170,16 @@ class MeticulousAddon:
                     "Continuing despite validation error - firmware mismatch "
                     "possible"
                 )
-                # Use a placeholder to continue operation
-                from meticulous.models import DeviceInfo
-                device_info = DeviceInfo(
-                    name="Unknown",
-                    model="Unknown",
-                    serial="Unknown",
-                    firmware="Unknown",
-                    software_version="Unknown",
-                    model_version="0.0.0"
-                )
+                # Use a placeholder object to continue operation
+                class PlaceholderDeviceInfo:
+                    def __init__(self):
+                        self.name = "Unknown"
+                        self.model = "Unknown"
+                        self.serial = "Unknown"
+                        self.firmware = "Unknown"
+                        self.software_version = "Unknown"
+
+                device_info = PlaceholderDeviceInfo()
 
             self.device_info = device_info
             logger.info(f"Connected to {device_info.name} (Serial: {device_info.serial})")
