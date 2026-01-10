@@ -463,6 +463,11 @@ class MeticulousAddon:
                 "state_topic": f"{base}/last_shot_time/state",
                 "name": "Last Shot Time",
             },  # noqa: E501
+            "active_profile": {
+                "component": "sensor",
+                "state_topic": f"{base}/active_profile/state",
+                "name": "Active Profile",
+            },  # noqa: E501
             "profile_author": {
                 "component": "sensor",
                 "state_topic": f"{base}/profile_author/state",
@@ -787,35 +792,35 @@ class MeticulousAddon:
             api = self.api
 
             def fetch_profiles():
-                resp = api.session.get(f"{api.base_url}/api/v1/profile")
+                # Use /api/v1/profile/list which returns an array of profile objects
+                # API returns: [{"id": "...", "name": "...", "author": "...", ...}, ...]
+                url = f"{api.base_url.rstrip('/')}/api/v1/profile/list"
+                resp = api.session.get(url)
                 resp.raise_for_status()
                 return resp.json()
 
             profiles_data = await asyncio.get_running_loop().run_in_executor(None, fetch_profiles)
 
-            if isinstance(profiles_data, dict):
-                # Assuming API returns {"profiles": [{"id": "...", "name": "..."}, ...]}
-                # or similar structure
-                profiles = profiles_data.get("profiles", [])
-                if profiles:
-                    old_profiles = self.available_profiles.copy()
-                    self.available_profiles = {
-                        p.get("id", p.get("name", "")): p.get("name", "Unknown") for p in profiles
-                    }
-                    logger.info(f"Fetched {len(self.available_profiles)} available profiles")
-                    # Detect and log profile list changes
-                    if old_profiles != self.available_profiles:
-                        added = set(self.available_profiles.keys()) - set(old_profiles.keys())
-                        removed = set(old_profiles.keys()) - set(self.available_profiles.keys())
-                        if added or removed:
-                            logger.info(
-                                f"Profile list changed: "
-                                f"+{len(added)} added, -{len(removed)} removed"
-                            )
-                        # Republish discovery with updated profile options
-                        if self.mqtt_client:
-                            logger.debug("Republishing MQTT discovery with new profile list")
-                            self._mqtt_publish_discovery()
+            # profiles_data is a list of profile objects
+            if isinstance(profiles_data, list):
+                old_profiles = self.available_profiles.copy()
+                self.available_profiles = {
+                    p.get("id", p.get("name", "")): p.get("name", "Unknown") for p in profiles_data
+                }
+                logger.info(f"Fetched {len(self.available_profiles)} available profiles")
+                # Detect and log profile list changes
+                if old_profiles != self.available_profiles:
+                    added = set(self.available_profiles.keys()) - set(old_profiles.keys())
+                    removed = set(old_profiles.keys()) - set(self.available_profiles.keys())
+                    if added or removed:
+                        logger.info(
+                            f"Profile list changed: "
+                            f"+{len(added)} added, -{len(removed)} removed"
+                        )
+                    # Republish discovery with updated profile options
+                    if self.mqtt_client:
+                        logger.debug("Republishing MQTT discovery with new profile list")
+                        self._mqtt_publish_discovery()
         except Exception as e:
             logger.error(f"Error fetching available profiles: {e}", exc_info=True)
 

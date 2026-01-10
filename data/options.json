@@ -1,0 +1,6 @@
+﻿{
+  "machine_ip": "192.168.0.115",
+  "scan_interval": 30,
+  "mqtt_enabled": false,
+  "debug": true
+}
