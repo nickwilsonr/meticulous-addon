@@ -89,6 +89,7 @@ class MeticulousAddon:
         # State tracking
         self.current_state = "unknown"
         self.current_profile = None
+        self.available_profiles = {}  # Map of profile_id -> profile_name
         self.device_info = None
 
         # Home Assistant session
@@ -507,6 +508,50 @@ class MeticulousAddon:
         }
         # fmt: on
 
+    def _mqtt_command_mapping(self) -> Dict[str, Dict[str, str]]:
+        """Return mapping of available commands for Home Assistant discovery."""
+        return {
+            "start_brew": {
+                "name": "Start Brew",
+                "icon": "mdi:play",
+                "command_suffix": "start_brew",
+            },
+            "stop_brew": {
+                "name": "Stop Brew",
+                "icon": "mdi:stop",
+                "command_suffix": "stop_brew",
+            },
+            "continue_brew": {
+                "name": "Continue Brew",
+                "icon": "mdi:play-pause",
+                "command_suffix": "continue_brew",
+            },
+            "preheat": {
+                "name": "Preheat",
+                "icon": "mdi:fire",
+                "command_suffix": "preheat",
+            },
+            "tare_scale": {
+                "name": "Tare Scale",
+                "icon": "mdi:scale",
+                "command_suffix": "tare_scale",
+            },
+            "set_brightness": {
+                "name": "Set Brightness",
+                "icon": "mdi:brightness-6",
+                "command_suffix": "set_brightness",
+                "type": "number",
+                "min": 0,
+                "max": 100,
+            },
+            "enable_sounds": {
+                "name": "Enable Sounds",
+                "icon": "mdi:volume-high",
+                "command_suffix": "enable_sounds",
+                "type": "switch",
+            },
+        }
+
     def _mqtt_device(self) -> Dict[str, Any]:
         info = self.device_info
         identifiers = [self.slug]
@@ -562,7 +607,77 @@ class MeticulousAddon:
             # Publish discovery config
             self.mqtt_client.publish(config_topic, jsonlib.dumps(payload), qos=0, retain=True)
             logger.debug(f"Published discovery for {object_id}: {jsonlib.dumps(payload)}")
-        logger.info(f"Published {len(self._mqtt_sensor_mapping())} MQTT discovery messages")
+
+        # Publish button commands
+        for key, cmd in self._mqtt_command_mapping().items():
+            object_id = f"{self.slug}_{key}"
+            cmd_type = cmd.get("type", "button")
+
+            if cmd_type == "number":
+                component = "number"
+                config_topic = f"{self.discovery_prefix}/{component}/{object_id}/config"
+                payload: Dict[str, Any] = {
+                    "name": cmd["name"],
+                    "uniq_id": object_id,
+                    "cmd_t": f"{self.command_prefix}/{cmd['command_suffix']}",
+                    "avty_t": self.availability_topic,
+                    "dev": device,
+                    "icon": cmd["icon"],
+                    "min": cmd.get("min", 0),
+                    "max": cmd.get("max", 100),
+                }
+            elif cmd_type == "switch":
+                component = "switch"
+                config_topic = f"{self.discovery_prefix}/{component}/{object_id}/config"
+                payload: Dict[str, Any] = {
+                    "name": cmd["name"],
+                    "uniq_id": object_id,
+                    "cmd_t": f"{self.command_prefix}/{cmd['command_suffix']}",
+                    "avty_t": self.availability_topic,
+                    "dev": device,
+                    "icon": cmd["icon"],
+                    "payload_on": "true",
+                    "payload_off": "false",
+                }
+            else:  # button
+                component = "button"
+                config_topic = f"{self.discovery_prefix}/{component}/{object_id}/config"
+                payload: Dict[str, Any] = {
+                    "name": cmd["name"],
+                    "uniq_id": object_id,
+                    "cmd_t": f"{self.command_prefix}/{cmd['command_suffix']}",
+                    "avty_t": self.availability_topic,
+                    "dev": device,
+                    "icon": cmd["icon"],
+                    "payload_press": "1",
+                }
+
+            self.mqtt_client.publish(config_topic, jsonlib.dumps(payload), qos=0, retain=True)
+            logger.debug(f"Published {cmd_type} discovery for {object_id}")
+
+        # Publish profile selector if profiles are available
+        if self.available_profiles:
+            object_id = f"{self.slug}_profile_selector"
+            config_topic = f"{self.discovery_prefix}/select/{object_id}/config"
+            payload: Dict[str, Any] = {
+                "name": "Active Profile",
+                "uniq_id": object_id,
+                "cmd_t": f"{self.command_prefix}/load_profile",
+                "stat_t": f"{self.state_prefix}/active_profile/state",
+                "avty_t": self.availability_topic,
+                "dev": device,
+                "icon": "mdi:coffee",
+                "options": list(self.available_profiles.values()),
+            }
+            self.mqtt_client.publish(config_topic, jsonlib.dumps(payload), qos=0, retain=True)
+            logger.debug(
+                f"Published profile selector discovery with {len(self.available_profiles)} options"
+            )
+
+        total = len(self._mqtt_sensor_mapping()) + len(self._mqtt_command_mapping())
+        if self.available_profiles:
+            total += 1  # Profile selector
+        logger.info(f"Published {total} MQTT discovery messages")
 
     async def _mqtt_publish_initial_state(self) -> None:
         """Fetch and publish initial state of all sensors (T0 snapshot).
@@ -663,6 +778,37 @@ class MeticulousAddon:
         # Publish all available initial state
         await self.publish_to_homeassistant(initial_data)
         logger.info(f"Published initial state for {len(initial_data)} sensors")
+
+    async def fetch_available_profiles(self):
+        """Fetch list of available profiles from the machine."""
+        if not self.api:
+            logger.warning("Cannot fetch profiles: API not connected")
+            return
+
+        try:
+            api = self.api
+
+            def fetch_profiles():
+                resp = api.session.get(f"{api.base_url}/api/v1/profile")
+                resp.raise_for_status()
+                return resp.json()
+
+            profiles_data = await asyncio.get_running_loop().run_in_executor(None, fetch_profiles)
+
+            if isinstance(profiles_data, dict):
+                # Assuming API returns {"profiles": [{"id": "...", "name": "..."}, ...]}
+                # or similar structure
+                profiles = profiles_data.get("profiles", [])
+                if profiles:
+                    self.available_profiles = {
+                        p.get("id", p.get("name", "")): p.get("name", "Unknown") for p in profiles
+                    }
+                    logger.debug(f"Fetched {len(self.available_profiles)} available profiles")
+                    # Republish discovery with updated profile options
+                    if self.mqtt_client:
+                        self._mqtt_publish_discovery()
+        except Exception as e:
+            logger.debug(f"Error fetching available profiles: {e}")
 
     # ---------------------------------------------------------------------
     # Test-facing helpers (wrappers) for discovery and backoff
@@ -1163,6 +1309,10 @@ class MeticulousAddon:
 
                 # Update profile info every 30 seconds
                 await self.update_profile_info()
+
+                # Fetch available profiles periodically (every 5 minutes)
+                if self.api and not self.available_profiles:
+                    await self.fetch_available_profiles()
 
                 # Update settings (brightness, sounds)
                 await self.update_settings()
