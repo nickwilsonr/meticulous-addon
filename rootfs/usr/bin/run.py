@@ -800,13 +800,24 @@ class MeticulousAddon:
                 # or similar structure
                 profiles = profiles_data.get("profiles", [])
                 if profiles:
+                    old_profiles = self.available_profiles.copy()
                     self.available_profiles = {
                         p.get("id", p.get("name", "")): p.get("name", "Unknown") for p in profiles
                     }
                     logger.debug(f"Fetched {len(self.available_profiles)} available profiles")
-                    # Republish discovery with updated profile options
-                    if self.mqtt_client:
-                        self._mqtt_publish_discovery()
+                    # Detect and log profile list changes
+                    if old_profiles != self.available_profiles:
+                        added = set(self.available_profiles.keys()) - set(old_profiles.keys())
+                        removed = set(old_profiles.keys()) - set(self.available_profiles.keys())
+                        if added or removed:
+                            logger.info(
+                                f"Profile list changed: "
+                                f"+{len(added)} added, -{len(removed)} removed"
+                            )
+                        # Republish discovery with updated profile options
+                        if self.mqtt_client:
+                            logger.debug("Republishing MQTT discovery with new profile list")
+                            self._mqtt_publish_discovery()
         except Exception as e:
             logger.debug(f"Error fetching available profiles: {e}")
 
@@ -1093,6 +1104,9 @@ class MeticulousAddon:
             if self.loop:
                 logger.debug("Scheduling profile info update")
                 asyncio.run_coroutine_threadsafe(self.update_profile_info(), self.loop)
+                # Also refresh available profiles in case list changed
+                logger.debug("Scheduling profile list refresh")
+                asyncio.run_coroutine_threadsafe(self.fetch_available_profiles(), self.loop)
             else:
                 logger.warning("No event loop available for profile update")
 
