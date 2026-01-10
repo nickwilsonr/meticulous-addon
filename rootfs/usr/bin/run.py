@@ -503,7 +503,7 @@ class MeticulousAddon:
         }
         # fmt: on
 
-    def _mqtt_command_mapping(self) -> Dict[str, Dict[str, str]]:
+    def _mqtt_command_mapping(self) -> Dict[str, Dict[str, str | int]]:
         """Return mapping of available commands for Home Assistant discovery."""
         return {
             "start_brew": {
