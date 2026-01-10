@@ -1,6 +1,11 @@
 # Changelog
 
 All notable user-facing changes to this add-on are documented here.
+## [0.5.1] - 2026-01-09
+
+### Bug Fix
+- Fixed missing profile selector dropdown on startup
+
 ## [0.5.0] - 2026-01-09
 
 ### 🎮 Full Machine Control in Home Assistant
