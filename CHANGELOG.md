@@ -1,6 +1,30 @@
 # Changelog
 
 All notable user-facing changes to this add-on are documented here.
+## [0.5.4] - 2026-01-13
+
+### 🔧 Code Quality & Maintenance
+
+#### Improvements
+- **Upgraded pymeticulous to 0.3.0** - Fixes Settings model validation errors
+  - `auto_preheat` is now optional, preventing validation errors
+  - `partial_retraction` now properly accepts float values
+- **Replaced direct API calls with proper wrappers** - More maintainable and future-proof
+  - Profile fetching now uses `api.list_profiles()` wrapper
+  - Last profile fetching now uses `api.get_last_profile()` wrapper
+- **Enhanced command logging** - Better diagnostics for debugging
+  - Tare scale command now reports detailed status
+  - Brightness command explicitly logs return values
+
+#### Bug Fixes
+- Fixed potential validation errors in Settings updates
+- Improved error handling for profile operations
+
+#### Technical Details
+- Removed workarounds for pymeticulous 0.2.0 bugs
+- Retained error suppression for device info (graceful fallback if firmware doesn't match expected schema)
+- Maintained pydantic logging suppression (reduces noise from validation warnings)
+
 ## [0.5.3] - 2026-01-09
 
 ### Bug Fix

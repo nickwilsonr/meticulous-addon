@@ -104,8 +104,12 @@ def handle_command_tare_scale(addon: "MeticulousAddon"):
     result = addon.api.execute_action(ActionType.TARE)
     if isinstance(result, APIError):
         logger.error(f"tare_scale failed: {result.error}")
+    elif result is None:
+        logger.error("tare_scale: returned None (unexpected)")
     else:
-        logger.info("tare_scale: Success")
+        # ActionResponse has 'status' field which may be None for success
+        status = getattr(result, "status", None)
+        logger.info(f"tare_scale: Success (status={status})")
 
 
 def handle_command_load_profile(addon: "MeticulousAddon", profile_id: str):
@@ -144,10 +148,13 @@ def handle_command_set_brightness(addon: "MeticulousAddon", payload: str):
         result = addon.api.set_brightness(brightness_req)
         if isinstance(result, APIError):
             logger.error(f"set_brightness failed: {result.error}")
-        else:
+        elif result is None:
+            # set_brightness returns None on success (pymeticulous design)
             logger.info(f"set_brightness: Success ({data.get('brightness')})")
             # Trigger settings update (safe if no running loop)
             _run_or_schedule(addon.update_settings())
+        else:
+            logger.warning(f"set_brightness: Unexpected result type: {type(result)}")
     except Exception as e:
         logger.error(f"set_brightness error: {e}", exc_info=True)
 

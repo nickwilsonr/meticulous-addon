@@ -792,21 +792,30 @@ class MeticulousAddon:
             api = self.api
 
             def fetch_profiles():
-                # Use /api/v1/profile/list which returns an array of profile objects
-                # API returns: [{"id": "...", "name": "...", "author": "...", ...}, ...]
-                url = f"{api.base_url.rstrip('/')}/api/v1/profile/list"
-                resp = api.session.get(url)
-                resp.raise_for_status()
-                return resp.json()
+                # Use api.list_profiles() wrapper which properly handles /api/v1/profile/list
+                result = api.list_profiles()
+                # Result is either List[PartialProfile] or APIError
+                return result
 
             profiles_data = await asyncio.get_running_loop().run_in_executor(None, fetch_profiles)
 
-            # profiles_data is a list of profile objects
+            # Check if result is APIError
+            if isinstance(profiles_data, APIError):
+                logger.error(f"Failed to fetch profiles: {profiles_data.error}")
+                return
+
+            # profiles_data is a list of PartialProfile objects
             if isinstance(profiles_data, list):
                 old_profiles = self.available_profiles.copy()
-                self.available_profiles = {
-                    p.get("id", p.get("name", "")): p.get("name", "Unknown") for p in profiles_data
-                }
+                # Convert PartialProfile objects to id->name mapping
+                self.available_profiles = {}
+                for p in profiles_data:
+                    # PartialProfile has 'id' and 'name' attributes
+                    profile_id = getattr(p, "id", None) or getattr(p, "name", "")
+                    profile_name = getattr(p, "name", "Unknown")
+                    if profile_id:
+                        self.available_profiles[profile_id] = profile_name
+
                 logger.info(f"Fetched {len(self.available_profiles)} available profiles")
                 # Detect and log profile list changes
                 if old_profiles != self.available_profiles:
@@ -1183,24 +1192,34 @@ class MeticulousAddon:
             api = self.api  # Capture reference for executor
 
             def fetch_last_profile_raw():
-                resp = api.session.get(f"{api.base_url}/api/v1/profile/last")
-                resp.raise_for_status()
-                return resp.json()
+                # Use api.get_last_profile() wrapper which properly handles the response
+                result = api.get_last_profile()
+                # Result is either LastProfile or APIError
+                return result
 
-            data = await asyncio.get_running_loop().run_in_executor(None, fetch_last_profile_raw)
+            result = await asyncio.get_running_loop().run_in_executor(None, fetch_last_profile_raw)
 
-            profile = data.get("profile", {}) if isinstance(data, dict) else {}
+            # Check if result is APIError
+            if isinstance(result, APIError):
+                logger.error(f"Failed to fetch last profile: {result.error}")
+                return
 
-            new_profile_name = profile.get("name", "Unknown")
+            # result is a LastProfile object with 'profile' attribute
+            profile = getattr(result, "profile", None) if result else None
+            if not profile:
+                logger.warning("No profile data in response")
+                return
+
+            new_profile_name = getattr(profile, "name", "Unknown")
             profile_changed = new_profile_name != self.current_profile
 
             self.current_profile = new_profile_name
 
             profile_data = {
                 "active_profile": new_profile_name,
-                "profile_author": profile.get("author"),
-                "target_temperature": profile.get("temperature"),
-                "target_weight": profile.get("final_weight"),
+                "profile_author": getattr(profile, "author", None),
+                "target_temperature": getattr(profile, "temperature", None),
+                "target_weight": getattr(profile, "final_weight", None),
             }
 
             await self.publish_to_homeassistant(profile_data)
