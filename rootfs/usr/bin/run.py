@@ -574,11 +574,15 @@ class MeticulousAddon:
         identifiers = [self.slug]
         if info and getattr(info, "serial", None):
             identifiers.append(info.serial)
+        device_name = (
+            getattr(info, "name", "Meticulous Espresso") if info else "Meticulous Espresso"
+        )
+        logger.debug(f"Device name for MQTT discovery: {device_name}")
         return {
             "identifiers": identifiers,
             "manufacturer": "Meticulous",
             "model": getattr(info, "model", "Espresso"),
-            "name": getattr(info, "name", "Meticulous Espresso"),
+            "name": device_name,
             "sw_version": getattr(info, "software_version", None),
             "hw_version": getattr(info, "model", None),
         }
@@ -1485,7 +1489,9 @@ class MeticulousAddon:
                     )
                     try:
                         # Wait for connection to fully handshake with broker
+                        logger.info("Waiting 1s for MQTT handshake before discovery publish...")
                         await asyncio.sleep(1.0)
+                        logger.info("Handshake complete, calling discovery publish...")
                         await self._mqtt_publish_discovery()
                         self.mqtt_discovery_pending = False
                     except Exception as e:
