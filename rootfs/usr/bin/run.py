@@ -886,7 +886,9 @@ class MeticulousAddon:
                     and hasattr(last_profile, "profile")
                 ):
                     profile = last_profile.profile
-                    initial_data["active_profile"] = getattr(profile, "name", None)
+                    active_profile = getattr(profile, "name", None)
+                    if active_profile:
+                        initial_data["active_profile"] = active_profile
                     initial_data["profile_author"] = getattr(profile, "author", None)
                     initial_data["target_temperature"] = getattr(profile, "temperature", None)
                     initial_data["target_weight"] = getattr(profile, "final_weight", None)

@@ -108,21 +108,33 @@ def handle_command_tare_scale(addon: "MeticulousAddon"):
         logger.info(f"tare_scale: Success (status={status})")
 
 
-def handle_command_load_profile(addon: "MeticulousAddon", profile_id: str):
+def handle_command_load_profile(addon: "MeticulousAddon", profile_name: str):
     if not addon.api:
         logger.error("Cannot load profile: API not connected")
         return
-    if not profile_id:
-        logger.error("load_profile: missing profile_id")
+    if not profile_name:
+        logger.error("load_profile: missing profile_name")
         return
     try:
+        # profile_name comes from HA select (the value), but we need the ID
+        # available_profiles maps id -> name, so we need to find the ID for this name
+        profile_id = None
+        for pid, pname in addon.available_profiles.items():
+            if pname == profile_name:
+                profile_id = pid
+                break
+
+        if not profile_id:
+            logger.error(f"load_profile: Unknown profile name: {profile_name}")
+            return
+
         payload = {
             "id": profile_id,
             "from": "app",
             "type": "focus",
         }
         addon.api.send_profile_hover(payload)
-        logger.info(f"load_profile: Set active profile ({profile_id})")
+        logger.info(f"load_profile: Set active profile ({profile_name})")
         _run_or_schedule(addon.update_profile_info())
     except Exception as e:
         logger.error(f"load_profile error: {e}", exc_info=True)
