@@ -1,6 +1,12 @@
 # Changelog
 
 All notable user-facing changes to this add-on are documented here.
+
+## [0.5.5] - 2026-01-15
+
+### 🐛 Bug Fixes
+- Added comprehensive error handling and diagnostics for MQTT discovery publish failures
+
 ## [0.5.4] - 2026-01-14
 
 ### ✨ New Features
