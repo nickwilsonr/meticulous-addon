@@ -120,6 +120,7 @@ class MeticulousAddon:
         self.mqtt_last_failed = False  # Track connection state for logging
         self.mqtt_connect_attempt = 0  # Track retry attempts
         self.mqtt_next_retry_time = 0.0  # Track when to retry MQTT
+        self.mqtt_discovery_pending = False  # Flag to publish discovery from main loop
 
         # Fetch MQTT credentials from Supervisor if not provided in config
         if self.mqtt_enabled and not (self.mqtt_username and self.mqtt_password):
@@ -584,7 +585,9 @@ class MeticulousAddon:
 
     def _mqtt_publish_discovery(self) -> None:
         if not (self.mqtt_enabled and self.mqtt_client):
+            logger.debug("Skipping discovery publish: mqtt not ready")
             return
+        logger.info("Publishing MQTT Home Assistant discovery configs")
         device = self._mqtt_device()
         for key, m in self._mqtt_sensor_mapping().items():
             # Remove active_profile from sensor discovery (only publish as select)
@@ -976,8 +979,9 @@ class MeticulousAddon:
                     logger.info(f"Subscribed to MQTT commands at {self.command_prefix}/#")
                     # Mark online
                     client.publish(self.availability_topic, payload="online", qos=0, retain=True)
-                    # Publish discovery and initial state on successful connection
-                    self._mqtt_publish_discovery()
+                    # Set flag to publish discovery from main event loop (thread-safe)
+                    self.mqtt_discovery_pending = True
+                    # Publish initial state on successful connection
                     if self.loop:
                         asyncio.run_coroutine_threadsafe(
                             self._mqtt_publish_initial_state(), self.loop
@@ -1417,6 +1421,14 @@ class MeticulousAddon:
                         logger.debug(f"Published firmware update availability: {available}")
                     except Exception as e:
                         logger.debug(f"Could not update firmware update sensor: {e}")
+
+                # Publish discovery if pending and client is connected
+                if self.mqtt_discovery_pending and self.mqtt_enabled and self.mqtt_client:
+                    try:
+                        self._mqtt_publish_discovery()
+                        self.mqtt_discovery_pending = False
+                    except Exception as e:
+                        logger.error(f"Error publishing MQTT discovery: {e}", exc_info=True)
 
                 # Publish health metrics
                 await self.publish_health_metrics()
