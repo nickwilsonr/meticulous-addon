@@ -632,17 +632,9 @@ class MeticulousAddon:
             elif key == "brightness":
                 payload["unit_of_meas"] = "%"
             try:
-                result = self.mqtt_client.publish(
-                    config_topic, jsonlib.dumps(payload), qos=0, retain=True
-                )
-                if result.rc == 0:
-                    result.wait_for_publish(timeout=1.0)
-                    discovery_count += 1
-                    logger.debug(f"Published discovery for {object_id} (topic={config_topic})")
-                else:
-                    logger.warning(
-                        f"Publish failed for {object_id} on topic {config_topic}: rc={result.rc}"
-                    )
+                self.mqtt_client.publish(config_topic, jsonlib.dumps(payload), qos=0, retain=True)
+                discovery_count += 1
+                logger.debug(f"Published discovery for {object_id} (topic={config_topic})")
             except Exception as e:
                 logger.error(
                     f"Failed to publish discovery for {object_id} on topic {config_topic}: {e}"
@@ -670,17 +662,11 @@ class MeticulousAddon:
                     "unit_of_meas": "%",
                 }
                 try:
-                    result = self.mqtt_client.publish(
+                    self.mqtt_client.publish(
                         config_topic, jsonlib.dumps(payload), qos=0, retain=True
                     )
-                    if result.rc == 0:
-                        result.wait_for_publish(timeout=1.0)
-                        discovery_count += 1
-                        logger.debug(f"Published brightness number entity for {object_id}")
-                    else:
-                        logger.warning(
-                            f"Publish failed for {object_id} on {config_topic}: " f"rc={result.rc}"
-                        )
+                    discovery_count += 1
+                    logger.debug(f"Published brightness number entity for {object_id}")
                 except Exception as e:
                     logger.error(f"Failed to publish brightness number entity for {object_id}: {e}")
                 continue
@@ -725,17 +711,9 @@ class MeticulousAddon:
                 }
 
             try:
-                result = self.mqtt_client.publish(
-                    config_topic, jsonlib.dumps(payload), qos=0, retain=True
-                )
-                if result.rc == 0:
-                    result.wait_for_publish(timeout=1.0)
-                    discovery_count += 1
-                    logger.debug(f"Published {cmd_type} discovery for {object_id}")
-                else:
-                    logger.warning(
-                        f"Publish failed for {object_id} on topic {config_topic}: rc={result.rc}"
-                    )
+                self.mqtt_client.publish(config_topic, jsonlib.dumps(payload), qos=0, retain=True)
+                discovery_count += 1
+                logger.debug(f"Published {cmd_type} discovery for {object_id}")
             except Exception as e:
                 logger.error(
                     f"Failed to publish {cmd_type} discovery for {object_id} "
@@ -757,20 +735,12 @@ class MeticulousAddon:
                 "options": list(self.available_profiles.values()),
             }
             try:
-                result = self.mqtt_client.publish(
-                    config_topic, jsonlib.dumps(payload), qos=0, retain=True
+                self.mqtt_client.publish(config_topic, jsonlib.dumps(payload), qos=0, retain=True)
+                discovery_count += 1
+                logger.debug(
+                    f"Published active profile selector with "
+                    f"{len(self.available_profiles)} options"
                 )
-                if result.rc == 0:
-                    result.wait_for_publish(timeout=1.0)
-                    discovery_count += 1
-                    logger.debug(
-                        f"Published active profile selector with "
-                        f"{len(self.available_profiles)} options"
-                    )
-                else:
-                    logger.warning(
-                        f"Publish failed for {object_id} on topic {config_topic}: rc={result.rc}"
-                    )
             except Exception as e:
                 logger.error(f"Failed to publish active profile selector: {e}")
 
