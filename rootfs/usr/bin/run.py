@@ -603,6 +603,7 @@ class MeticulousAddon:
 
         try:
             # Publish sensor discoveries
+            sample_payload_logged = False
             for key, m in self._mqtt_sensor_mapping().items():
                 if key == "active_profile":
                     continue
@@ -640,6 +641,14 @@ class MeticulousAddon:
                 elif key == "brightness":
                     payload["unit_of_meas"] = "%"
 
+                # Log first sensor payload as example
+                if not sample_payload_logged:
+                    logger.info(
+                        f"SAMPLE SENSOR DISCOVERY PAYLOAD ({key}): "
+                        f"topic={config_topic}, payload={jsonlib.dumps(payload)}"
+                    )
+                    sample_payload_logged = True
+
                 result = self.mqtt_client.publish(
                     config_topic, jsonlib.dumps(payload), qos=1, retain=True
                 )
@@ -652,6 +661,7 @@ class MeticulousAddon:
 
         try:
             # Publish command discoveries
+            sample_cmd_logged = False
             for key, cmd in self._mqtt_command_mapping().items():
                 object_id = f"{self.slug}_{key}"
                 cmd_type = cmd.get("type", "button")
@@ -671,6 +681,14 @@ class MeticulousAddon:
                         "max": cmd.get("max", 100),
                         "unit_of_meas": "%",
                     }
+                    # Log first command payload as example
+                    if not sample_cmd_logged:
+                        logger.info(
+                            f"SAMPLE COMMAND DISCOVERY PAYLOAD ({key}): "
+                            f"topic={config_topic}, payload={jsonlib.dumps(payload)}"
+                        )
+                        sample_cmd_logged = True
+
                     result = self.mqtt_client.publish(
                         config_topic, jsonlib.dumps(payload), qos=1, retain=True
                     )
