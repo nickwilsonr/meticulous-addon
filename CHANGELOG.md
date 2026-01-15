@@ -2,6 +2,13 @@
 
 All notable user-facing changes to this add-on are documented here.
 
+## [0.5.8] - 2026-01-15
+
+### 🐛 Bug Fixes
+- Fixed MQTT discovery message queuing by publishing from main event loop
+  - Discovery publishes were happening from on_connect callback thread, causing threading issues
+  - Now publishes from main asyncio event loop where state messages work correctly
+
 ## [0.5.7] - 2026-01-15
 
 ### 🐛 Bug Fixes
