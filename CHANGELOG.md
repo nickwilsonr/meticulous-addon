@@ -2,6 +2,13 @@
 
 All notable user-facing changes to this add-on are documented here.
 
+## [0.5.11] - 2026-01-15
+
+### 🔧 Improvements
+- Enhanced MQTT discovery diagnostics with connection state logging
+- Now logs client connection status before and after discovery publishing
+- Improved debug output for troubleshooting discovery issues
+
 ## [0.5.10] - 2026-01-15
 
 ### 🐛 Bug Fixes
