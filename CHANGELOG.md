@@ -2,6 +2,14 @@
 
 All notable user-facing changes to this add-on are documented here.
 
+## [0.5.12] - 2026-01-15
+
+### 🐛 Bug Fixes
+- Fixed MQTT discovery entities not appearing in Home Assistant
+- Changed MQTT discovery publish quality of service from QoS 0 to QoS 1 for guaranteed delivery
+- Made discovery publishing fully async with proper await handling
+- Discovery messages now properly reach Home Assistant broker
+
 ## [0.5.11] - 2026-01-15
 
 ### 🔧 Improvements

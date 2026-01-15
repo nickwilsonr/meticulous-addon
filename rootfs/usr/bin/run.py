@@ -583,7 +583,7 @@ class MeticulousAddon:
             "hw_version": getattr(info, "model", None),
         }
 
-    def _mqtt_publish_discovery(self) -> None:
+    async def _mqtt_publish_discovery(self) -> None:
         if not (self.mqtt_enabled and self.mqtt_client):
             logger.debug("Skipping discovery publish: mqtt not ready")
             return
@@ -634,8 +634,11 @@ class MeticulousAddon:
                 payload["unit_of_meas"] = "g"
             elif key == "brightness":
                 payload["unit_of_meas"] = "%"
-            result = self.mqtt_client.publish(
-                config_topic, jsonlib.dumps(payload), qos=0, retain=True
+            result = await asyncio.get_running_loop().run_in_executor(
+                None,
+                lambda: self.mqtt_client.publish(
+                    config_topic, jsonlib.dumps(payload), qos=1, retain=True
+                ),
             )
             discovery_count += 1
             conn_state = self.mqtt_client.is_connected()
@@ -664,8 +667,11 @@ class MeticulousAddon:
                     "max": cmd.get("max", 100),
                     "unit_of_meas": "%",
                 }
-                result = self.mqtt_client.publish(
-                    config_topic, jsonlib.dumps(payload), qos=0, retain=True
+                result = await asyncio.get_running_loop().run_in_executor(
+                    None,
+                    lambda: self.mqtt_client.publish(
+                        config_topic, jsonlib.dumps(payload), qos=1, retain=True
+                    ),
                 )
                 discovery_count += 1
                 logger.debug(f"Published {key} brightness number to {config_topic}: rc={result.rc}")
@@ -710,8 +716,11 @@ class MeticulousAddon:
                     "payload_press": "1",
                 }
 
-            result = self.mqtt_client.publish(
-                config_topic, jsonlib.dumps(payload), qos=0, retain=True
+            result = await asyncio.get_running_loop().run_in_executor(
+                None,
+                lambda: self.mqtt_client.publish(
+                    config_topic, jsonlib.dumps(payload), qos=1, retain=True
+                ),
             )
             discovery_count += 1
             logger.debug(f"Published {key} ({cmd_type}) command to {config_topic}: rc={result.rc}")
@@ -730,8 +739,11 @@ class MeticulousAddon:
                 "icon": "mdi:coffee",
                 "options": list(self.available_profiles.values()),
             }
-            result = self.mqtt_client.publish(
-                config_topic, jsonlib.dumps(payload), qos=0, retain=True
+            result = await asyncio.get_running_loop().run_in_executor(
+                None,
+                lambda: self.mqtt_client.publish(
+                    config_topic, jsonlib.dumps(payload), qos=1, retain=True
+                ),
             )
             discovery_count += 1
             logger.debug(f"Published active_profile to {config_topic}: rc={result.rc}")
@@ -898,7 +910,7 @@ class MeticulousAddon:
                     # Republish discovery with updated profile options
                     if self.mqtt_client:
                         logger.debug("Republishing MQTT discovery with new profile list")
-                        self._mqtt_publish_discovery()
+                        await self._mqtt_publish_discovery()
         except Exception as e:
             logger.error(f"Error fetching available profiles: {e}", exc_info=True)
 
@@ -1468,7 +1480,7 @@ class MeticulousAddon:
                     try:
                         # Wait for connection to fully handshake with broker
                         await asyncio.sleep(1.0)
-                        self._mqtt_publish_discovery()
+                        await self._mqtt_publish_discovery()
                         self.mqtt_discovery_pending = False
                     except Exception as e:
                         logger.error(f"Error publishing MQTT discovery: {e}", exc_info=True)
