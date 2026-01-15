@@ -2,6 +2,14 @@
 
 All notable user-facing changes to this add-on are documented here.
 
+## [0.5.18] - 2026-01-15
+
+### 🔧 Improvements
+- Fixed MQTT discovery subscription order to match zigbee2mqtt pattern
+- Now subscribes to homeassistant/# BEFORE publishing discovery configs
+- Ensures proper handshaking with broker before publishing discovery messages
+- Resolves discovery message delivery to Home Assistant
+
 ## [0.5.17] - 2026-01-15
 
 ### ⚡ Performance
