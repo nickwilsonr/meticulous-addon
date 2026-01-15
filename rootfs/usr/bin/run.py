@@ -636,7 +636,7 @@ class MeticulousAddon:
                     config_topic, jsonlib.dumps(payload), qos=0, retain=True
                 )
                 if result.rc == 0:
-                    result.wait_for_publish()
+                    result.wait_for_publish(timeout=1.0)
                     discovery_count += 1
                     logger.debug(f"Published discovery for {object_id} (topic={config_topic})")
                 else:
@@ -674,7 +674,7 @@ class MeticulousAddon:
                         config_topic, jsonlib.dumps(payload), qos=0, retain=True
                     )
                     if result.rc == 0:
-                        result.wait_for_publish()
+                        result.wait_for_publish(timeout=1.0)
                         discovery_count += 1
                         logger.debug(f"Published brightness number entity for {object_id}")
                     else:
@@ -729,7 +729,7 @@ class MeticulousAddon:
                     config_topic, jsonlib.dumps(payload), qos=0, retain=True
                 )
                 if result.rc == 0:
-                    result.wait_for_publish()
+                    result.wait_for_publish(timeout=1.0)
                     discovery_count += 1
                     logger.debug(f"Published {cmd_type} discovery for {object_id}")
                 else:
@@ -761,7 +761,7 @@ class MeticulousAddon:
                     config_topic, jsonlib.dumps(payload), qos=0, retain=True
                 )
                 if result.rc == 0:
-                    result.wait_for_publish()
+                    result.wait_for_publish(timeout=1.0)
                     discovery_count += 1
                     logger.debug(
                         f"Published active profile selector with "
