@@ -2,6 +2,20 @@
 
 All notable user-facing changes to this add-on are documented here.
 
+## [0.5.15] - 2026-01-15
+
+### 🔧 Improvements
+- Enhanced MQTT diagnostics with detailed connection attempt logging
+- Now logs MQTT connection host, port, username, and password status
+- Better visibility for troubleshooting credential and authentication issues
+
+## [0.5.14] - 2026-01-15
+
+### 🔧 Improvements
+- Upgraded MQTT discovery with QoS 1 and proper async/await handling
+- Extended background thread flush time to ensure all discovery messages reach broker
+- Added comprehensive error handling for all discovery publishing blocks
+
 ## [0.5.13] - 2026-01-15
 
 ### 🔧 Improvements
