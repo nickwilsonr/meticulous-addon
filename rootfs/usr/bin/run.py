@@ -632,10 +632,15 @@ class MeticulousAddon:
                 result = self.mqtt_client.publish(
                     config_topic, jsonlib.dumps(payload), qos=0, retain=True
                 )
-                discovery_count += 1
-                logger.debug(
-                    f"Published discovery for {object_id} (topic={config_topic}): {result}"
-                )
+                if result.rc == 0:
+                    discovery_count += 1
+                    logger.debug(
+                        f"Published discovery for {object_id} (topic={config_topic}): {result}"
+                    )
+                else:
+                    logger.warning(
+                        f"Publish failed for {object_id} on topic {config_topic}: rc={result.rc}"
+                    )
             except Exception as e:
                 logger.error(
                     f"Failed to publish discovery for {object_id} on topic {config_topic}: {e}"
@@ -666,10 +671,15 @@ class MeticulousAddon:
                     result = self.mqtt_client.publish(
                         config_topic, jsonlib.dumps(payload), qos=0, retain=True
                     )
-                    discovery_count += 1
-                    logger.debug(
-                        f"Published brightness number entity for {object_id} (result={result})"
-                    )
+                    if result.rc == 0:
+                        discovery_count += 1
+                        logger.debug(
+                            f"Published brightness number entity for {object_id} (result={result})"
+                        )
+                    else:
+                        logger.warning(
+                            f"Publish failed for {object_id} on {config_topic}: " f"rc={result.rc}"
+                        )
                 except Exception as e:
                     logger.error(f"Failed to publish brightness number entity for {object_id}: {e}")
                 continue
@@ -717,8 +727,15 @@ class MeticulousAddon:
                 result = self.mqtt_client.publish(
                     config_topic, jsonlib.dumps(payload), qos=0, retain=True
                 )
-                discovery_count += 1
-                logger.debug(f"Published {cmd_type} discovery for {object_id} (result={result})")
+                if result.rc == 0:
+                    discovery_count += 1
+                    logger.debug(
+                        f"Published {cmd_type} discovery for {object_id} (result={result})"
+                    )
+                else:
+                    logger.warning(
+                        f"Publish failed for {object_id} on topic {config_topic}: rc={result.rc}"
+                    )
             except Exception as e:
                 logger.error(
                     f"Failed to publish {cmd_type} discovery for {object_id} "
@@ -743,11 +760,16 @@ class MeticulousAddon:
                 result = self.mqtt_client.publish(
                     config_topic, jsonlib.dumps(payload), qos=0, retain=True
                 )
-                discovery_count += 1
-                logger.debug(
-                    f"Published active profile selector with "
-                    f"{len(self.available_profiles)} options (result={result})"
-                )
+                if result.rc == 0:
+                    discovery_count += 1
+                    logger.debug(
+                        f"Published active profile selector with "
+                        f"{len(self.available_profiles)} options (result={result})"
+                    )
+                else:
+                    logger.warning(
+                        f"Publish failed for {object_id} on topic {config_topic}: rc={result.rc}"
+                    )
             except Exception as e:
                 logger.error(f"Failed to publish active profile selector: {e}")
 
