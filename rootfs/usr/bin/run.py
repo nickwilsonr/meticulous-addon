@@ -325,7 +325,7 @@ class MeticulousAddon:
             }
 
             health_topic = f"{self.slug}/health"
-            self.mqtt_client.publish(health_topic, jsonlib.dumps(health_data), qos=0, retain=False)
+            self.mqtt_client.publish(health_topic, jsonlib.dumps(health_data), qos=1, retain=False)
             msg = (
                 f"Published health metrics: uptime={int(uptime)}s, "
                 f"reconnects={self.reconnect_count}"
@@ -366,8 +366,8 @@ class MeticulousAddon:
                     payload = (
                         str(value) if not isinstance(value, (dict, list)) else jsonlib.dumps(value)
                     )
-                    # Publish state with QoS 1 and retain=True for reliability
-                    self.mqtt_client.publish(topic, payload, qos=1, retain=True)
+                    # Publish state with QoS 1 (reliable delivery, no retain for efficiency)
+                    self.mqtt_client.publish(topic, payload, qos=1, retain=False)
                     published_count += 1
                 if published_count > 0:
                     logger.debug(f"Published {published_count} MQTT state updates")
@@ -1546,7 +1546,7 @@ class MeticulousAddon:
                                 f"{self.state_prefix}/firmware_update_available/state",
                                 str(available).lower(),
                                 qos=1,
-                                retain=True,
+                                retain=False,
                             )
                             logger.debug(f"Published firmware update availability: {available}")
                         except Exception as e:
