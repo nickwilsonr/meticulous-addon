@@ -588,6 +588,7 @@ class MeticulousAddon:
             logger.debug("Skipping discovery publish: mqtt not ready")
             return
         logger.info("Publishing MQTT Home Assistant discovery configs")
+        discovery_count = 0
         device = self._mqtt_device()
         for key, m in self._mqtt_sensor_mapping().items():
             # Remove active_profile from sensor discovery (only publish as select)
@@ -625,7 +626,11 @@ class MeticulousAddon:
                 payload["unit_of_meas"] = "g"
             elif key == "brightness":
                 payload["unit_of_meas"] = "%"
-            self.mqtt_client.publish(config_topic, jsonlib.dumps(payload), qos=0, retain=True)
+            result = self.mqtt_client.publish(
+                config_topic, jsonlib.dumps(payload), qos=0, retain=True
+            )
+            discovery_count += 1
+            logger.info(f"Published {key} to {config_topic}: rc={result.rc}")
 
         # Publish button/number/switch commands
         for key, cmd in self._mqtt_command_mapping().items():
@@ -691,6 +696,7 @@ class MeticulousAddon:
                 }
 
             self.mqtt_client.publish(config_topic, jsonlib.dumps(payload), qos=0, retain=True)
+            discovery_count += 1
 
         # Publish active_profile as select entity (only, not as sensor)
         if self.available_profiles:
@@ -707,8 +713,10 @@ class MeticulousAddon:
                 "options": list(self.available_profiles.values()),
             }
             self.mqtt_client.publish(config_topic, jsonlib.dumps(payload), qos=0, retain=True)
+            discovery_count += 1
+            discovery_count += 1
 
-        logger.info("Published MQTT discovery messages for all entities")
+        logger.info(f"Published {discovery_count} MQTT discovery messages")
 
     async def _mqtt_publish_initial_state(self) -> None:
         """Fetch and publish initial state of all sensors (T0 snapshot).
@@ -978,8 +986,12 @@ class MeticulousAddon:
                     client.subscribe(f"{self.command_prefix}/#")
                     logger.info(f"Subscribed to MQTT commands at {self.command_prefix}/#")
                     # Mark online
-                    client.publish(self.availability_topic, payload="online", qos=0, retain=True)
+                    online_result = client.publish(
+                        self.availability_topic, payload="online", qos=0, retain=True
+                    )
+                    logger.info(f"Published online status: rc={online_result.rc}")
                     # Set flag to publish discovery from main event loop (thread-safe)
+                    logger.info("Setting mqtt_discovery_pending=True")
                     self.mqtt_discovery_pending = True
                     # Publish initial state on successful connection
                     if self.loop:
@@ -1424,11 +1436,21 @@ class MeticulousAddon:
 
                 # Publish discovery if pending and client is connected
                 if self.mqtt_discovery_pending and self.mqtt_enabled and self.mqtt_client:
+                    is_connected = self.mqtt_client.is_connected() if self.mqtt_client else False
+                    logger.info(
+                        f"Discovery pending: flag=True, enabled={self.mqtt_enabled}, "
+                        f"client_exists=True, connected={is_connected}"
+                    )
                     try:
                         self._mqtt_publish_discovery()
                         self.mqtt_discovery_pending = False
                     except Exception as e:
                         logger.error(f"Error publishing MQTT discovery: {e}", exc_info=True)
+                elif self.mqtt_discovery_pending:
+                    logger.info(
+                        f"Discovery NOT published: pending=True, enabled={self.mqtt_enabled}, "
+                        f"client={self.mqtt_client is not None}"
+                    )
 
                 # Publish health metrics
                 await self.publish_health_metrics()
