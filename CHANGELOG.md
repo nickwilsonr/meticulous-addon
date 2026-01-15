@@ -2,6 +2,11 @@
 
 All notable user-facing changes to this add-on are documented here.
 
+## [0.5.10] - 2026-01-15
+
+### 🐛 Bug Fixes
+- Fixed MQTT discovery entities not appearing - added connection handshake delay
+
 ## [0.5.9] - 2026-01-15
 
 ### 🔧 Improvements

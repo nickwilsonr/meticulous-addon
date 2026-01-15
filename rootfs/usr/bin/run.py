@@ -588,6 +588,14 @@ class MeticulousAddon:
             logger.debug("Skipping discovery publish: mqtt not ready")
             return
         logger.info("Publishing MQTT Home Assistant discovery configs")
+        is_connected = self.mqtt_client.is_connected()
+        logger.info(f"Client connection state at discovery start: is_connected={is_connected}")
+        if not is_connected:
+            logger.error(
+                "MQTT client not connected at discovery start - aborting discovery publish"
+            )
+            return
+
         discovery_count = 0
         device = self._mqtt_device()
         for key, m in self._mqtt_sensor_mapping().items():
@@ -630,7 +638,10 @@ class MeticulousAddon:
                 config_topic, jsonlib.dumps(payload), qos=0, retain=True
             )
             discovery_count += 1
-            logger.info(f"Published {key} to {config_topic}: rc={result.rc}")
+            conn_state = self.mqtt_client.is_connected()
+            logger.debug(
+                f"Published {key} to {config_topic}: rc={result.rc}, is_connected={conn_state}"
+            )
 
         # Publish button/number/switch commands
         for key, cmd in self._mqtt_command_mapping().items():
@@ -653,7 +664,11 @@ class MeticulousAddon:
                     "max": cmd.get("max", 100),
                     "unit_of_meas": "%",
                 }
-                self.mqtt_client.publish(config_topic, jsonlib.dumps(payload), qos=0, retain=True)
+                result = self.mqtt_client.publish(
+                    config_topic, jsonlib.dumps(payload), qos=0, retain=True
+                )
+                discovery_count += 1
+                logger.debug(f"Published {key} brightness number to {config_topic}: rc={result.rc}")
                 continue
 
             if cmd_type == "number":
@@ -695,8 +710,11 @@ class MeticulousAddon:
                     "payload_press": "1",
                 }
 
-            self.mqtt_client.publish(config_topic, jsonlib.dumps(payload), qos=0, retain=True)
+            result = self.mqtt_client.publish(
+                config_topic, jsonlib.dumps(payload), qos=0, retain=True
+            )
             discovery_count += 1
+            logger.debug(f"Published {key} ({cmd_type}) command to {config_topic}: rc={result.rc}")
 
         # Publish active_profile as select entity (only, not as sensor)
         if self.available_profiles:
@@ -712,11 +730,16 @@ class MeticulousAddon:
                 "icon": "mdi:coffee",
                 "options": list(self.available_profiles.values()),
             }
-            self.mqtt_client.publish(config_topic, jsonlib.dumps(payload), qos=0, retain=True)
+            result = self.mqtt_client.publish(
+                config_topic, jsonlib.dumps(payload), qos=0, retain=True
+            )
             discovery_count += 1
-            discovery_count += 1
+            logger.debug(f"Published active_profile to {config_topic}: rc={result.rc}")
 
-        logger.info(f"Published {discovery_count} MQTT discovery messages")
+        final_connected = self.mqtt_client.is_connected()
+        logger.info(
+            f"Published {discovery_count} discovery messages, final is_connected={final_connected}"
+        )
 
     async def _mqtt_publish_initial_state(self) -> None:
         """Fetch and publish initial state of all sensors (T0 snapshot).
@@ -980,6 +1003,7 @@ class MeticulousAddon:
 
             # Set callbacks
             def on_connect(client, userdata, flags, rc):
+                logger.info(f"on_connect callback fired: rc={rc}")
                 if rc == 0:
                     logger.info(f"MQTT connected to {self.mqtt_host}:{self.mqtt_port}")
                     # Subscribe to command topics after successful connection
@@ -1442,8 +1466,8 @@ class MeticulousAddon:
                         f"client_exists=True, connected={is_connected}"
                     )
                     try:
-                        # Wait a moment for connection to fully handshake with broker
-                        await asyncio.sleep(0.5)
+                        # Wait for connection to fully handshake with broker
+                        await asyncio.sleep(1.0)
                         self._mqtt_publish_discovery()
                         self.mqtt_discovery_pending = False
                     except Exception as e:
