@@ -101,11 +101,8 @@ def handle_command_tare_scale(addon: "MeticulousAddon"):
     result = addon.api.execute_action(ActionType.TARE)
     if isinstance(result, APIError):
         logger.error(f"tare_scale failed: {result.error}")
-    elif result is None:
-        logger.error("tare_scale: returned None (unexpected)")
     else:
-        status = getattr(result, "status", None)
-        logger.info(f"tare_scale: Success (status={status})")
+        logger.info("tare_scale: Success")
 
 
 def handle_command_load_profile(addon: "MeticulousAddon", profile_name: str):
@@ -149,17 +146,19 @@ def handle_command_set_brightness(addon: "MeticulousAddon", payload: str):
         interpolation_value = data.get("interpolation", "curve")
         brightness_req = BrightnessRequest(
             brightness=data.get("brightness", 50),
-            interpolation=str(interpolation_value) if interpolation_value is not None else "curve",
+            interpolation=(
+                str(interpolation_value) if interpolation_value is not None else "curve"
+            ),
             animation_time=data.get("animation_time", 500),
         )
         result = addon.api.set_brightness(brightness_req)
         if isinstance(result, APIError):
             logger.error(f"set_brightness failed: {result.error}")
-        elif result is None:
-            logger.info(f"set_brightness: Success ({data.get('brightness')})")
-            _run_or_schedule(addon.update_settings())
         else:
-            logger.warning(f"set_brightness: Unexpected result type: {type(result)}")
+            brightness_value = data.get("brightness")
+            logger.info(f"set_brightness: Success ({brightness_value})")
+            # Immediately publish the new brightness state
+            _run_or_schedule(addon.publish_to_homeassistant({"brightness": brightness_value}))
     except Exception as e:
         logger.error(f"set_brightness error: {e}", exc_info=True)
 
