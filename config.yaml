@@ -15,12 +15,24 @@ services:
 homeassistant_api: true
 hassio_api: true
 hassio_role: default
+host_network: true
 auth_api: false
 ingress: false
 panel_icon: mdi:coffee-maker
+panel_title: Meticulous Espresso
 image: ghcr.io/nickwilsonr/{arch}-meticulous-addon
+map:
+  - config:rw
+  - ssl
+  - share
+  - backup
+  - media
+ports:
+  "8080/tcp": null
+environment: {}
 options:
   machine_ip: "example: 192.168.1.100 or meticulous.local"
+  refresh_rate_minutes: 5
   scan_interval: 30
   debug: false
   mqtt_enabled: true
@@ -30,7 +42,8 @@ options:
   mqtt_password: ""
 schema:
   machine_ip: str?
-  scan_interval: int(10,300)
+  refresh_rate_minutes: int(1,60)?
+  scan_interval: int(10,300)?
   debug: bool?
   mqtt_enabled: bool?
   mqtt_host: str?

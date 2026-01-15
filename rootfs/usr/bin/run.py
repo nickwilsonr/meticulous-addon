@@ -57,14 +57,21 @@ class MeticulousAddon:
     """Main class for Meticulous Espresso Add-on."""
 
     def __init__(self):
-        """Initialize the add-on."""
+        """Initialize the add-on.
+
+        Configurable options:
+        - refresh_rate_minutes: How often to refresh all sensor states from the API (default: 5)
+        Recommend 5-10 minutes for most users; set lower for more frequent updates.
+        """
         self.config = self._load_config()
         self._setup_logging()
         raw_machine_ip = str(self.config.get("machine_ip", "")).strip()
         if raw_machine_ip.lower().startswith("example") or " " in raw_machine_ip:
             raw_machine_ip = ""
         self.machine_ip = raw_machine_ip
-        self.scan_interval = self.config.get("scan_interval", 30)
+        # New: configurable refresh rate (minutes, default 5)
+        self.refresh_rate_minutes = int(self.config.get("refresh_rate_minutes", 5))
+        self.scan_interval = self.refresh_rate_minutes * 60
         self.running = False
         self.socket_connected = False
         # Backoff configuration
@@ -381,133 +388,134 @@ class MeticulousAddon:
 
     def _mqtt_sensor_mapping(self) -> Dict[str, Dict[str, str]]:
         base = self.state_prefix
-        # fmt: off  # Long topic names are more readable on single lines
+        # fmt: off
         return {
             "connected": {
                 "component": "binary_sensor",
                 "state_topic": f"{base}/connected/state",
                 "name": "Meticulous Connected",
-            },  # noqa: E501
+            },
             "state": {
                 "component": "sensor",
                 "state_topic": f"{base}/state/state",
                 "name": "Meticulous State",
-            },  # noqa: E501
+            },
             "brewing": {
                 "component": "binary_sensor",
                 "state_topic": f"{base}/brewing/state",
                 "name": "Meticulous Brewing",
-            },  # noqa: E501
+            },
             "boiler_temperature": {
                 "component": "sensor",
                 "state_topic": f"{base}/boiler_temperature/state",
                 "name": "Boiler Temperature",
-            },  # noqa: E501
+            },
             "brew_head_temperature": {
                 "component": "sensor",
                 "state_topic": f"{base}/brew_head_temperature/state",
                 "name": "Brew Head Temperature",
-            },  # noqa: E501
+            },
             "external_temp_1": {
                 "component": "sensor",
                 "state_topic": f"{base}/external_temp_1/state",
                 "name": "External Temperature 1",
-            },  # noqa: E501
+            },
             "external_temp_2": {
                 "component": "sensor",
                 "state_topic": f"{base}/external_temp_2/state",
                 "name": "External Temperature 2",
-            },  # noqa: E501
+            },
             "pressure": {
                 "component": "sensor",
                 "state_topic": f"{base}/pressure/state",
                 "name": "Pressure",
-            },  # noqa: E501
+            },
             "flow_rate": {
                 "component": "sensor",
                 "state_topic": f"{base}/flow_rate/state",
                 "name": "Flow Rate",
-            },  # noqa: E501
+            },
             "shot_timer": {
                 "component": "sensor",
                 "state_topic": f"{base}/shot_timer/state",
                 "name": "Shot Timer",
-            },  # noqa: E501
+            },
             "shot_weight": {
                 "component": "sensor",
                 "state_topic": f"{base}/shot_weight/state",
                 "name": "Shot Weight",
-            },  # noqa: E501
+            },
             "total_shots": {
                 "component": "sensor",
                 "state_topic": f"{base}/total_shots/state",
                 "name": "Total Shots",
-            },  # noqa: E501
+            },
             "last_shot_name": {
                 "component": "sensor",
                 "state_topic": f"{base}/last_shot_name/state",
                 "name": "Last Shot Name",
-            },  # noqa: E501
+            },
             "last_shot_profile": {
                 "component": "sensor",
                 "state_topic": f"{base}/last_shot_profile/state",
                 "name": "Last Shot Profile",
-            },  # noqa: E501
+            },
             "last_shot_rating": {
                 "component": "sensor",
                 "state_topic": f"{base}/last_shot_rating/state",
                 "name": "Last Shot Rating",
-            },  # noqa: E501
+            },
             "last_shot_time": {
                 "component": "sensor",
                 "state_topic": f"{base}/last_shot_time/state",
                 "name": "Last Shot Time",
-            },  # noqa: E501
-            "active_profile": {
-                "component": "sensor",
-                "state_topic": f"{base}/active_profile/state",
-                "name": "Active Profile",
-            },  # noqa: E501
+            },
             "profile_author": {
                 "component": "sensor",
                 "state_topic": f"{base}/profile_author/state",
                 "name": "Profile Author",
-            },  # noqa: E501
+            },
             "target_temperature": {
                 "component": "sensor",
                 "state_topic": f"{base}/target_temperature/state",
                 "name": "Target Temperature",
-            },  # noqa: E501
+            },
             "target_weight": {
                 "component": "sensor",
                 "state_topic": f"{base}/target_weight/state",
                 "name": "Target Weight",
-            },  # noqa: E501
+            },
             "firmware_version": {
                 "component": "sensor",
                 "state_topic": f"{base}/firmware_version/state",
                 "name": "Firmware Version",
-            },  # noqa: E501
+            },
             "software_version": {
                 "component": "sensor",
                 "state_topic": f"{base}/software_version/state",
                 "name": "Software Version",
-            },  # noqa: E501
+            },
             "voltage": {
                 "component": "sensor",
                 "state_topic": f"{base}/voltage/state",
                 "name": "Voltage",
-            },  # noqa: E501
+            },
             "sounds_enabled": {
                 "component": "binary_sensor",
                 "state_topic": f"{base}/sounds_enabled/state",
                 "name": "Sounds Enabled",
-            },  # noqa: E501
+            },
+            # Combined brightness: single number entity for both sensor and control
             "brightness": {
-                "component": "sensor",
+                "component": "number",
                 "state_topic": f"{base}/brightness/state",
                 "name": "Brightness",
-            },  # noqa: E501
+            },
+            "firmware_update_available": {
+                "component": "binary_sensor",
+                "state_topic": f"{base}/firmware_update_available/state",
+                "name": "Firmware Update Available",
+            },
         }
         # fmt: on
 
@@ -553,6 +561,11 @@ class MeticulousAddon:
                 "command_suffix": "enable_sounds",
                 "type": "switch",
             },
+            "reboot_machine": {
+                "name": "Reboot Machine",
+                "icon": "mdi:restart",
+                "command_suffix": "reboot_machine",
+            },
         }
 
     def _mqtt_device(self) -> Dict[str, Any]:
@@ -563,10 +576,10 @@ class MeticulousAddon:
         return {
             "identifiers": identifiers,
             "manufacturer": "Meticulous",
-            "model": getattr(info, "model_version", "Espresso"),
+            "model": getattr(info, "model", "Espresso"),
             "name": getattr(info, "name", "Meticulous Espresso"),
             "sw_version": getattr(info, "software_version", None),
-            "hw_version": getattr(info, "model_version", None),
+            "hw_version": getattr(info, "model", None),
         }
 
     def _mqtt_publish_discovery(self) -> None:
@@ -574,6 +587,9 @@ class MeticulousAddon:
             return
         device = self._mqtt_device()
         for key, m in self._mqtt_sensor_mapping().items():
+            # Remove active_profile from sensor discovery (only publish as select)
+            if key == "active_profile":
+                continue
             component = m["component"]
             object_id = f"{self.slug}_{key}"
             config_topic = f"{self.discovery_prefix}/{component}/{object_id}/config"
@@ -584,7 +600,6 @@ class MeticulousAddon:
                 "avty_t": self.availability_topic,
                 "dev": device,
             }
-            # Add device_class / units where appropriate
             temp_keys = (
                 "boiler_temperature",
                 "brew_head_temperature",
@@ -607,14 +622,33 @@ class MeticulousAddon:
                 payload["unit_of_meas"] = "g"
             elif key == "brightness":
                 payload["unit_of_meas"] = "%"
-            # Publish discovery config
             self.mqtt_client.publish(config_topic, jsonlib.dumps(payload), qos=0, retain=True)
             logger.debug(f"Published discovery for {object_id}: {jsonlib.dumps(payload)}")
 
-        # Publish button commands
+        # Publish button/number/switch commands
         for key, cmd in self._mqtt_command_mapping().items():
             object_id = f"{self.slug}_{key}"
             cmd_type = cmd.get("type", "button")
+
+            if key == "set_brightness":
+                # Publish brightness as a number entity (combined sensor/control)
+                component = "number"
+                config_topic = f"{self.discovery_prefix}/{component}/{object_id}/config"
+                payload: Dict[str, Any] = {
+                    "name": "Brightness",
+                    "uniq_id": object_id,
+                    "stat_t": f"{self.state_prefix}/brightness/state",
+                    "cmd_t": f"{self.command_prefix}/set_brightness",
+                    "avty_t": self.availability_topic,
+                    "dev": device,
+                    "icon": cmd["icon"],
+                    "min": cmd.get("min", 0),
+                    "max": cmd.get("max", 100),
+                    "unit_of_meas": "%",
+                }
+                self.mqtt_client.publish(config_topic, jsonlib.dumps(payload), qos=0, retain=True)
+                logger.debug(f"Published brightness number entity for {object_id}")
+                continue
 
             if cmd_type == "number":
                 component = "number"
@@ -658,7 +692,7 @@ class MeticulousAddon:
             self.mqtt_client.publish(config_topic, jsonlib.dumps(payload), qos=0, retain=True)
             logger.debug(f"Published {cmd_type} discovery for {object_id}")
 
-        # Publish active_profile as select entity (combines sensor + selector)
+        # Publish active_profile as select entity (only, not as sensor)
         if self.available_profiles:
             object_id = f"{self.slug}_active_profile"
             config_topic = f"{self.discovery_prefix}/select/{object_id}/config"
@@ -701,7 +735,7 @@ class MeticulousAddon:
                 {
                     "firmware_version": self.device_info.firmware,
                     "software_version": self.device_info.software_version,
-                    "model": self.device_info.model_version,
+                    "model": getattr(self.device_info, "model", None),
                     "serial": self.device_info.serial,
                     "name": self.device_info.name,
                     "voltage": getattr(self.device_info, "mainVoltage", None),
@@ -737,6 +771,16 @@ class MeticulousAddon:
                             initial_data["last_shot_time"] = shot_time.isoformat()
                 except Exception as e:
                     logger.debug(f"Could not fetch initial last shot: {e}")
+
+                # Firmware update availability sensor
+                try:
+                    update_status = api.check_for_updates()
+                    available = False
+                    if update_status and not isinstance(update_status, APIError):
+                        available = getattr(update_status, "available", False)
+                    initial_data["firmware_update_available"] = available
+                except Exception as e:
+                    logger.debug(f"Could not fetch firmware update status: {e}")
             except Exception as e:
                 logger.debug(f"Could not fetch initial statistics: {e}")
 
@@ -983,7 +1027,7 @@ class MeticulousAddon:
         device_data = {
             "firmware_version": self.device_info.firmware,
             "software_version": self.device_info.software_version,
-            "model": self.device_info.model_version,
+            "model": getattr(self.device_info, "model", None),
             "serial": self.device_info.serial,
             "name": self.device_info.name,
             "voltage": getattr(self.device_info, "mainVoltage", None),
@@ -1319,7 +1363,10 @@ class MeticulousAddon:
                 await asyncio.sleep(5)  # Check every 5 seconds
 
     async def periodic_updates(self):
-        """Perform periodic polling updates for non-real-time data."""
+        """Perform periodic polling updates for non-real-time data.
+
+        All sensors are heartbeat-refreshed from the API every refresh_rate_minutes (default: 5).
+        """
         # Initial delay to let Socket.IO establish
         await asyncio.sleep(10)
 
@@ -1351,7 +1398,7 @@ class MeticulousAddon:
                 if not self.socket_connected:
                     await self.update_profile_info()
 
-                # Fetch available profiles periodically (every 5 minutes)
+                # Fetch available profiles periodically (every refresh)
                 if self.api and not self.available_profiles:
                     await self.fetch_available_profiles()
 
@@ -1361,10 +1408,27 @@ class MeticulousAddon:
                 # Update statistics
                 await self.update_statistics()
 
+                # Update firmware update availability sensor
+                if self.api and self.mqtt_enabled and self.mqtt_client:
+                    try:
+                        update_status = self.api.check_for_updates()
+                        available = False
+                        if update_status and not isinstance(update_status, APIError):
+                            available = getattr(update_status, "available", False)
+                        self.mqtt_client.publish(
+                            f"{self.state_prefix}/firmware_update_available/state",
+                            str(available).lower(),
+                            qos=0,
+                            retain=False,
+                        )
+                        logger.debug(f"Published firmware update availability: {available}")
+                    except Exception as e:
+                        logger.debug(f"Could not update firmware update sensor: {e}")
+
                 # Publish health metrics
                 await self.publish_health_metrics()
 
-                # Wait for next update cycle
+                # Wait for next update cycle (heartbeat refresh)
                 await asyncio.sleep(self.scan_interval)
 
             except Exception as e:
@@ -1440,6 +1504,10 @@ class MeticulousAddon:
 def main():
     """Entry point for the add-on."""
     addon = MeticulousAddon()
+    logger.info(
+        f"Sensor refresh rate is set to {addon.refresh_rate_minutes} minute(s). "
+        "To change, set 'refresh_rate_minutes' in the add-on config (recommended: 5-10)."
+    )
     try:
         asyncio.run(addon.run())
     except Exception as e:

@@ -7,7 +7,7 @@ Integrate your Meticulous Espresso machine with Home Assistant for real-time mon
 - **Real-time brewing data**: Pressure, flow rate, weight, shot timer
 - **Temperature monitoring**: Boiler and brew head temperatures
 - **22+ automatic sensors**: Machine status, profiles, statistics, device info
-- **8 control commands**: Start/stop brew, preheat, tare scale, load profiles, adjust brightness/sounds
+- **10 control commands**: Start/stop/continue brew, preheat, tare scale, load profiles, adjust brightness/sounds, reboot machine
 - **MQTT auto-discovery**: Entities appear automatically in Home Assistant
 - **Graceful reconnection**: Automatic recovery from network issues
 
@@ -51,10 +51,19 @@ machine_ip: "192.168.1.100"
 machine_ip: "meticulous.local"
 ```
 
+
 ### Optional Settings
 
+**`refresh_rate_minutes`** (default: 5, recommended: 5–10)
+How often (in minutes) to refresh all sensor states from the machine. Lower values increase update frequency but may increase network/API load. This controls the heartbeat/periodic refresh for all sensors, ensuring state is kept up to date even if the machine or Home Assistant restarts.
+
+**UI Highlight:**
+- In the add-on config panel, this appears as a number input labeled:
+   > **Sensor Refresh Rate (minutes)**
+   > How often to refresh all sensor states from the machine. Recommended: 5–10 minutes. Lower values increase update frequency but may increase network/API load.
+
 **`scan_interval`** (default: 30)
-How often (in seconds) to poll for statistics and device info. Range: 10-300.
+How often (in seconds) to poll for statistics and device info. Range: 10-300. (Legacy, can be ignored if using `refresh_rate_minutes`)
 
 **`debug`** (default: false)
 Enable debug logging for detailed troubleshooting.
@@ -84,10 +93,15 @@ Once connected, the add-on automatically creates entities in Home Assistant:
 - **Status**: `sensor.meticulous_state`, `binary_sensor.meticulous_brewing`
 - **Temperature**: `sensor.meticulous_boiler_temperature`, `sensor.meticulous_brew_head_temperature`
 - **Brewing**: `sensor.meticulous_shot_timer`, `sensor.meticulous_pressure`, `sensor.meticulous_flow_rate`, `sensor.meticulous_shot_weight`
-- **Profile**: `sensor.meticulous_active_profile`, `sensor.meticulous_profile_author`
+- **Profile**: `sensor.meticulous_profile_author`
 - **Statistics**: `sensor.meticulous_total_shots`, `sensor.meticulous_last_shot_name`, `sensor.meticulous_last_shot_rating`
-- **Settings**: `sensor.meticulous_brightness`, `binary_sensor.meticulous_sounds_enabled`
-- **Device**: `sensor.meticulous_firmware_version`, `sensor.meticulous_software_version`, `sensor.meticulous_voltage`
+- **Settings**: `binary_sensor.meticulous_sounds_enabled`
+- **Device**: `sensor.meticulous_firmware_version`, `sensor.meticulous_software_version`, `sensor.meticulous_voltage`, `binary_sensor.meticulous_firmware_update_available`
+
+### Controls / Selectors
+
+- **Brightness (number)**: `number.meticulous_brightness`
+- **Active Profile (select)**: `select.meticulous_active_profile`
 
 ### Commands (via MQTT)
 
@@ -95,11 +109,13 @@ Publish to these topics to control your machine:
 
 - `meticulous_espresso/command/start_brew` — Start brewing
 - `meticulous_espresso/command/stop_brew` — Stop brewing
+- `meticulous_espresso/command/continue_brew` — Continue brewing
 - `meticulous_espresso/command/preheat` — Preheat machine
 - `meticulous_espresso/command/tare_scale` — Tare the scale
 - `meticulous_espresso/command/load_profile` — Load profile (payload: `profile_id`)
-- `meticulous_espresso/command/set_brightness` — Set brightness (payload: 0-100)
+- `meticulous_espresso/command/set_brightness` — Set brightness (payload: 0-100 as number or JSON with interpolation/animation_time)
 - `meticulous_espresso/command/enable_sounds` — Enable/disable sounds (payload: `true`/`false`)
+- `meticulous_espresso/command/reboot_machine` — Reboot the machine
 
 ---
 

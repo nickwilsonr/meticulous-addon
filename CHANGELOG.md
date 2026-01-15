@@ -1,29 +1,20 @@
 # Changelog
 
 All notable user-facing changes to this add-on are documented here.
-## [0.5.4] - 2026-01-13
+## [0.5.4] - 2026-01-14
 
-### 🔧 Code Quality & Maintenance
+### ✨ New Features
+- **New Commands**: Added `continue_brew` and `reboot_machine` commands
+- **Firmware Update Sensor**: Binary sensor now shows when updates are available
+- **Improved Brightness Control**: Brightness is now a proper number entity (slider in UI)
 
-#### Improvements
-- **Upgraded pymeticulous to 0.3.0** - Fixes Settings model validation errors
-  - `auto_preheat` is now optional, preventing validation errors
-  - `partial_retraction` now properly accepts float values
-- **Replaced direct API calls with proper wrappers** - More maintainable and future-proof
-  - Profile fetching now uses `api.list_profiles()` wrapper
-  - Last profile fetching now uses `api.get_last_profile()` wrapper
-- **Enhanced command logging** - Better diagnostics for debugging
-  - Tare scale command now reports detailed status
-  - Brightness command explicitly logs return values
+### 🐛 Bug Fixes
+- Fixed settings validation errors when updating profile options
+- Improved profile loading reliability
+- Enhanced command logging for better diagnostics
 
-#### Bug Fixes
-- Fixed potential validation errors in Settings updates
-- Improved error handling for profile operations
-
-#### Technical Details
-- Removed workarounds for pymeticulous 0.2.0 bugs
-- Retained error suppression for device info (graceful fallback if firmware doesn't match expected schema)
-- Maintained pydantic logging suppression (reduces noise from validation warnings)
+### ℹ️ Note
+- Sensor refresh rate is now configurable via `refresh_rate_minutes` (recommended: 5-10 minutes)
 
 ## [0.5.3] - 2026-01-09
 

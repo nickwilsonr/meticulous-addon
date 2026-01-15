@@ -215,3 +215,17 @@ class TestCommandValidation(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+"""Unit tests for MQTT command handlers."""
+
+import json
+import os
+import sys
+import unittest
+from unittest.mock import Mock
+
+from meticulous.api_types import ActionType, APIError
+
+# Add project directory to path
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "..", "rootfs", "usr", "bin"))
+
+# ...rest of the file unchanged...

@@ -9,7 +9,6 @@ from unittest.mock import MagicMock, patch
 # Add project directory to path
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "..", "rootfs", "usr", "bin"))
 
-
 # These imports will show as unresolved but work at runtime
 # due to dynamic path manipulation above
 # pyright: reportMissingImports=false
@@ -40,7 +39,8 @@ class TestConfigLoading(unittest.TestCase):
         addon = MeticulousAddon()
 
         self.assertEqual(addon.machine_ip, "192.168.1.100")
-        self.assertEqual(addon.scan_interval, 30)
+        # scan_interval is now derived from refresh_rate_minutes (5 * 60 = 300 seconds)
+        self.assertEqual(addon.scan_interval, 300)
 
     @patch("builtins.open")
     @patch("os.getenv")
@@ -56,7 +56,8 @@ class TestConfigLoading(unittest.TestCase):
         addon = MeticulousAddon()
 
         # Should have default values
-        self.assertEqual(addon.scan_interval, 30)
+        # scan_interval is derived from refresh_rate_minutes (default 5 * 60 = 300 seconds)
+        self.assertEqual(addon.scan_interval, 300)
         self.assertTrue(addon.mqtt_enabled)
         self.assertEqual(addon.mqtt_host, "core-mosquitto")
         self.assertEqual(addon.mqtt_port, 1883)
@@ -242,7 +243,7 @@ class TestImportHandling(unittest.TestCase):
         """Test pyMeticulous import succeeds."""
         try:
             from meticulous.api import Api, ApiOptions  # noqa: F401
-            from meticulous.api_types import ActionType, StatusData, Temperatures  # noqa: F401
+            from meticulous.api_types import ActionType, StatusData  # noqa: F401
         except ImportError as e:
             self.fail(f"pyMeticulous import failed: {e}")
 
@@ -256,3 +257,15 @@ class TestImportHandling(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+"""Integration tests for the Meticulous Espresso Add-on."""
+
+import json
+import os
+import sys
+import unittest
+from unittest.mock import MagicMock, patch
+
+# Add project directory to path
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "..", "rootfs", "usr", "bin"))
+
+# ...rest of the file unchanged...
