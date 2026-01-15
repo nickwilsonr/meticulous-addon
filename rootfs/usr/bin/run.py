@@ -589,6 +589,9 @@ class MeticulousAddon:
                 f"mqtt_client={self.mqtt_client is not None}"
             )
             return
+        if not self.mqtt_client.is_connected():
+            logger.warning("MQTT client is not connected; cannot publish discovery")
+            return
         logger.info(f"Starting MQTT discovery publish (discovery_prefix={self.discovery_prefix})")
         discovery_count = 0
         device = self._mqtt_device()
