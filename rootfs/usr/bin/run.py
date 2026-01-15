@@ -1442,6 +1442,8 @@ class MeticulousAddon:
                         f"client_exists=True, connected={is_connected}"
                     )
                     try:
+                        # Wait a moment for connection to fully handshake with broker
+                        await asyncio.sleep(0.5)
                         self._mqtt_publish_discovery()
                         self.mqtt_discovery_pending = False
                     except Exception as e:
