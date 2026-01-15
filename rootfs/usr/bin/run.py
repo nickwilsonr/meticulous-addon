@@ -1012,6 +1012,11 @@ class MeticulousAddon:
         try:
             import paho.mqtt.client as mqtt
 
+            logger.info(
+                f"Attempting MQTT connection to {self.mqtt_host}:{self.mqtt_port} "
+                f"with username={self.mqtt_username}, has_password={bool(self.mqtt_password)}"
+            )
+
             client = mqtt.Client(client_id=self.slug)
 
             # Set callbacks
