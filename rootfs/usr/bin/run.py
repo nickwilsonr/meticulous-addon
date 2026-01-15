@@ -636,10 +636,9 @@ class MeticulousAddon:
                     config_topic, jsonlib.dumps(payload), qos=0, retain=True
                 )
                 if result.rc == 0:
+                    result.wait_for_publish()
                     discovery_count += 1
-                    logger.debug(
-                        f"Published discovery for {object_id} (topic={config_topic}): {result}"
-                    )
+                    logger.debug(f"Published discovery for {object_id} (topic={config_topic})")
                 else:
                     logger.warning(
                         f"Publish failed for {object_id} on topic {config_topic}: rc={result.rc}"
@@ -675,10 +674,9 @@ class MeticulousAddon:
                         config_topic, jsonlib.dumps(payload), qos=0, retain=True
                     )
                     if result.rc == 0:
+                        result.wait_for_publish()
                         discovery_count += 1
-                        logger.debug(
-                            f"Published brightness number entity for {object_id} (result={result})"
-                        )
+                        logger.debug(f"Published brightness number entity for {object_id}")
                     else:
                         logger.warning(
                             f"Publish failed for {object_id} on {config_topic}: " f"rc={result.rc}"
@@ -731,10 +729,9 @@ class MeticulousAddon:
                     config_topic, jsonlib.dumps(payload), qos=0, retain=True
                 )
                 if result.rc == 0:
+                    result.wait_for_publish()
                     discovery_count += 1
-                    logger.debug(
-                        f"Published {cmd_type} discovery for {object_id} (result={result})"
-                    )
+                    logger.debug(f"Published {cmd_type} discovery for {object_id}")
                 else:
                     logger.warning(
                         f"Publish failed for {object_id} on topic {config_topic}: rc={result.rc}"
@@ -764,10 +761,11 @@ class MeticulousAddon:
                     config_topic, jsonlib.dumps(payload), qos=0, retain=True
                 )
                 if result.rc == 0:
+                    result.wait_for_publish()
                     discovery_count += 1
                     logger.debug(
                         f"Published active profile selector with "
-                        f"{len(self.available_profiles)} options (result={result})"
+                        f"{len(self.available_profiles)} options"
                     )
                 else:
                     logger.warning(

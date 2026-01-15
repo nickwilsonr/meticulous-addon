@@ -8,6 +8,10 @@
       "name": "Scan Interval",
       "description": "How often to poll the machine for updates (in seconds)"
     },
+    "refresh_rate_minutes": {
+      "name": "Sensor Refresh Rate",
+      "description": "How often to refresh sensor state in minutes (recommended: 5-10). Higher values reduce system load."
+    },
     "debug": {
       "name": "Debug Mode",
       "description": "Enable detailed debug logging for troubleshooting"
