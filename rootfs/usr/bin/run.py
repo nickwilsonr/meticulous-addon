@@ -671,14 +671,31 @@ class MeticulousAddon:
                 }
 
                 # Add device_class and other fields based on sensor type
-                if component == "binary_sensor":
+                if component == "switch":
+                    # Switch entities need command_topic and payload_on/off
+                    payload["command_topic"] = m.get(
+                        "command_topic", f"{self.command_prefix}/{key}"
+                    )
+                    payload["payload_on"] = m.get("payload_on", "true")
+                    payload["payload_off"] = m.get("payload_off", "false")
+                    if key == "sounds_enabled":
+                        payload["icon"] = "mdi:speaker"
+                elif component == "number":
+                    # Number entities need command_topic and min/max values
+                    payload["command_topic"] = m.get(
+                        "command_topic", f"{self.command_prefix}/{key}"
+                    )
+                    payload["min"] = m.get("min", 0)
+                    payload["max"] = m.get("max", 100)
+                    if key == "brightness":
+                        payload["unit_of_measurement"] = "%"
+                        payload["icon"] = "mdi:brightness-6"
+                elif component == "binary_sensor":
                     # Binary sensors need device_class or explicit payload mappings
                     if key == "connected":
                         payload["device_class"] = "connectivity"
                     elif key == "brewing":
                         payload["device_class"] = "running"
-                    elif key == "sounds_enabled":
-                        payload["device_class"] = "switch"
                     elif key == "firmware_update_available":
                         payload["device_class"] = "update"
                     else:
@@ -704,8 +721,6 @@ class MeticulousAddon:
                     payload["unit_of_measurement"] = "s"
                 elif key in ("shot_weight", "target_weight"):
                     payload["unit_of_measurement"] = "g"
-                elif key == "brightness":
-                    payload["unit_of_measurement"] = "%"
                 elif key == "flow_rate":
                     payload["unit_of_measurement"] = "ml/s"
                 elif key == "last_shot_time":
