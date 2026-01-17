@@ -75,6 +75,45 @@ class MeticulousAddon:
         stale_interval_hours = int(self.config.get("stale_data_refresh_interval", 24))
         self.stale_data_refresh_interval = stale_interval_hours * 3600
 
+        # Delta-based filtering configuration
+        self.enable_delta_filtering = bool(self.config.get("enable_delta_filtering", True))
+        self.sensor_deltas: Dict[str, float] = {
+            "boiler_temperature": float(self.config.get("boiler_temperature_delta", 0.5)),
+            "brew_head_temperature": float(self.config.get("brew_head_temperature_delta", 0.5)),
+            "external_temp_1": float(self.config.get("external_temp_1_delta", 0.5)),
+            "external_temp_2": float(self.config.get("external_temp_2_delta", 0.5)),
+            "pressure": float(self.config.get("pressure_delta", 0.2)),
+            "flow_rate": float(self.config.get("flow_rate_delta", 0.1)),
+            "shot_weight": float(self.config.get("shot_weight_delta", 0.1)),
+            "shot_timer": float(self.config.get("shot_timer_delta", 1.0)),
+            "elapsed_time": float(self.config.get("elapsed_time_delta", 1.0)),
+            "target_temperature": float(self.config.get("target_temperature_delta", 0.0)),
+            "target_weight": float(self.config.get("target_weight_delta", 0.0)),
+            "target_pressure": float(self.config.get("target_pressure_delta", 0.0)),
+            "target_flow": float(self.config.get("target_flow_delta", 0.0)),
+            "voltage": float(self.config.get("voltage_delta", 1.0)),
+            "brightness": float(self.config.get("brightness_delta", 1.0)),
+        }
+        # String/Boolean/Timestamp sensors - exact match filtering
+        self.exact_match_sensors = {
+            "state",
+            "active_profile",
+            "brewing",
+            "connected",
+            "last_shot_name",
+            "last_shot_profile",
+            "last_shot_rating",
+            "profile_author",
+            "firmware_version",
+            "software_version",
+            "last_shot_time",
+            "firmware_update_available",
+            "sounds_enabled",
+            "total_shots",
+        }
+        # Track last values for each field (for delta filtering)
+        self.last_field_values: Dict[str, Any] = {}
+
         # Track last update time per field for universal throttling
         self.last_field_update_time: Dict[str, float] = {}
         self.last_stale_refresh_time = time.time()
@@ -1152,25 +1191,79 @@ class MeticulousAddon:
     # Throttling Helper
     # =========================================================================
 
-    def _filter_throttled_fields(self, fields: Dict[str, Any]) -> Dict[str, Any]:
-        """Filter out throttled fields from an event.
+    def _should_publish_field(self, field_name: str, field_value: Any) -> bool:
+        """Determine if a field should be published based on delta or change detection.
 
-        For each field, checks if enough time has passed since last update.
-        Returns only fields that should be published (not throttled).
-        Updates last_field_update_time for each field checked.
+        - For exact match sensors (strings, booleans, timestamps): publish on any change
+        - For numeric sensors: publish if delta threshold exceeded or value is None
+        - Returns True if field should be published, False if throttled
         """
-        current_time = time.time()
+        if not self.enable_delta_filtering:
+            # Delta filtering disabled - publish everything
+            return True
+
+        # Always publish None values (sensor not available)
+        if field_value is None:
+            return True
+
+        # Check if this is an exact-match sensor (publish on any change)
+        if field_name in self.exact_match_sensors:
+            last_value = self.last_field_values.get(field_name)
+            # Publish if value changed from previous
+            if last_value != field_value:
+                self.last_field_values[field_name] = field_value
+                return True
+            return False
+
+        # For numeric sensors, check delta threshold
+        delta_threshold = self.sensor_deltas.get(field_name)
+        if delta_threshold is not None:
+            last_value = self.last_field_values.get(field_name)
+
+            # No previous value - always publish
+            if last_value is None:
+                self.last_field_values[field_name] = field_value
+                return True
+
+            # Check if delta exceeded (or if delta is 0, publish on any change)
+            if delta_threshold == 0:
+                # Delta of 0 means publish on any change
+                if last_value != field_value:
+                    self.last_field_values[field_name] = field_value
+                    return True
+                return False
+            else:
+                # Check if absolute change >= delta threshold
+                try:
+                    abs_delta = abs(float(field_value) - float(last_value))
+                    if abs_delta >= delta_threshold:
+                        self.last_field_values[field_name] = field_value
+                        return True
+                except (ValueError, TypeError):
+                    # If we can't convert to float, treat as change
+                    self.last_field_values[field_name] = field_value
+                    return True
+                return False
+
+        # Unknown field - publish it (safe default)
+        self.last_field_values[field_name] = field_value
+        return True
+
+    def _filter_throttled_fields(self, fields: Dict[str, Any]) -> Dict[str, Any]:
+        """Filter fields based on delta thresholds and change detection.
+
+        For each field, checks if it should be published based on:
+        - Exact match sensors: any change triggers publish
+        - Numeric sensors: delta threshold must be exceeded
+        - Unknown sensors: always publish (safe default)
+
+        Returns only fields that should be published.
+        """
         fields_to_publish = {}
 
         for field_name, field_value in fields.items():
-            last_update = self.last_field_update_time.get(field_name, 0)
-            time_since_last = current_time - last_update
-
-            # If enough time has passed, include this field and record the time
-            if time_since_last >= self.socket_io_throttle_interval:
+            if self._should_publish_field(field_name, field_value):
                 fields_to_publish[field_name] = field_value
-                # Record the time for this field
-                self.last_field_update_time[field_name] = current_time
 
         return fields_to_publish
 
@@ -1343,6 +1436,12 @@ class MeticulousAddon:
     def _handle_settings_change_event(self, settings: Dict):
         """Handle settings change events from Socket.IO (e.g., brightness)."""
         logger.info(f"Settings change event received: {settings}")
+        # Normalize brightness to 0-100 range if present
+        if isinstance(settings, dict) and "brightness" in settings:
+            brightness = settings.get("brightness")
+            # If brightness is in 0-1.0 range, convert to 0-100
+            if isinstance(brightness, (int, float)) and 0 <= brightness <= 1:
+                settings["brightness"] = int(brightness * 100)
         # This should capture brightness changes and other settings updates
         if self.loop:
             asyncio.run_coroutine_threadsafe(self.publish_to_homeassistant(settings), self.loop)

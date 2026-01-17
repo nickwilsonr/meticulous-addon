@@ -40,6 +40,22 @@ options:
   mqtt_port: 1883
   mqtt_username: ""
   mqtt_password: ""
+  enable_delta_filtering: true
+  boiler_temperature_delta: 0.5
+  brew_head_temperature_delta: 0.5
+  external_temp_1_delta: 0.5
+  external_temp_2_delta: 0.5
+  pressure_delta: 0.2
+  flow_rate_delta: 0.1
+  shot_weight_delta: 0.1
+  shot_timer_delta: 1.0
+  elapsed_time_delta: 1.0
+  target_temperature_delta: 0.0
+  target_weight_delta: 0.0
+  target_pressure_delta: 0.0
+  target_flow_delta: 0.0
+  voltage_delta: 1.0
+  brightness_delta: 1
 schema:
   machine_ip: str?
   socket_io_throttle_interval: int(1,10)?
@@ -50,3 +66,19 @@ schema:
   mqtt_port: int(1,65535)?
   mqtt_username: str?
   mqtt_password: password?
+  enable_delta_filtering: bool?
+  boiler_temperature_delta: float(0,10)?
+  brew_head_temperature_delta: float(0,10)?
+  external_temp_1_delta: float(0,10)?
+  external_temp_2_delta: float(0,10)?
+  pressure_delta: float(0,5)?
+  flow_rate_delta: float(0,5)?
+  shot_weight_delta: float(0,5)?
+  shot_timer_delta: float(0,10)?
+  elapsed_time_delta: float(0,10)?
+  target_temperature_delta: float(0,10)?
+  target_weight_delta: float(0,10)?
+  target_pressure_delta: float(0,5)?
+  target_flow_delta: float(0,5)?
+  voltage_delta: float(0,50)?
+  brightness_delta: float(0,50)?
