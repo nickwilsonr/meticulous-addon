@@ -5,7 +5,7 @@
       "description": "The IP address or hostname of your Meticulous Espresso machine (e.g., 192.168.1.100 or meticulous.local)"
     },
     "socket_io_throttle_interval": {
-      "name": "Socket.IO Throttle Interval",
+      "name": "Chatty Sensor Throttle Interval",
       "description": "How long to wait between Socket.IO sensor updates (in seconds, 1-10). Prevents MQTT flooding from chatty sensors like pressure and temperature. Each sensor tracked independently."
     },
     "stale_data_refresh_interval": {
