@@ -518,6 +518,7 @@ class MeticulousAddon:
                 "component": "sensor",
                 "state_topic": f"{base}/last_shot_time/state",
                 "name": "Last Shot Time",
+                "device_class": "timestamp",
             },
             "profile_author": {
                 "component": "sensor",
@@ -550,9 +551,12 @@ class MeticulousAddon:
                 "name": "Voltage",
             },
             "sounds_enabled": {
-                "component": "binary_sensor",
+                "component": "switch",
                 "state_topic": f"{base}/sounds_enabled/state",
+                "command_topic": f"{self.command_prefix}/enable_sounds",
                 "name": "Sounds Enabled",
+                "payload_on": "true",
+                "payload_off": "false",
             },
             # Combined brightness: single number entity for both sensor and control
             "brightness": {
@@ -603,12 +607,6 @@ class MeticulousAddon:
                 "type": "number",
                 "min": 0,
                 "max": 100,
-            },
-            "enable_sounds": {
-                "name": "Enable Sounds",
-                "icon": "mdi:volume-high",
-                "command_suffix": "enable_sounds",
-                "type": "switch",
             },
             "reboot_machine": {
                 "name": "Reboot Machine",
@@ -901,25 +899,49 @@ class MeticulousAddon:
                         initial_data["last_shot_rating"] = (
                             getattr(last_shot, "rating", None) or "none"
                         )
-                        if hasattr(last_shot, "time") and last_shot.time:
-                            shot_time = datetime.fromtimestamp(last_shot.time)
-                            initial_data["last_shot_time"] = shot_time.isoformat()
+                        # Handle last_shot_time - convert timestamp to ISO format
+                        shot_timestamp = getattr(last_shot, "time", None)
+                        if shot_timestamp:
+                            try:
+                                shot_time = datetime.fromtimestamp(shot_timestamp)
+                                initial_data["last_shot_time"] = shot_time.isoformat()
+                            except (ValueError, OSError, TypeError):
+                                initial_data["last_shot_time"] = None
+                        else:
+                            initial_data["last_shot_time"] = None
+                    else:
+                        # Ensure these are in initial_data even if fetch failed
+                        initial_data["last_shot_name"] = None
+                        initial_data["last_shot_profile"] = None
+                        initial_data["last_shot_rating"] = "none"
+                        initial_data["last_shot_time"] = None
                 except Exception as e:
                     logger.debug(f"Could not fetch initial last shot: {e}")
+                    # Ensure these are in initial_data even if fetch failed
+                    initial_data["last_shot_name"] = None
+                    initial_data["last_shot_profile"] = None
+                    initial_data["last_shot_rating"] = "none"
+                    initial_data["last_shot_time"] = None
 
                 # Firmware update availability sensor
+                available = False
                 try:
                     update_status = api.check_for_updates()
-                    available = False
                     if update_status and not isinstance(update_status, APIError):
                         available = getattr(update_status, "available", False)
-                    initial_data["firmware_update_available"] = available
                 except Exception as e:
                     logger.debug(f"Could not fetch firmware update status: {e}")
+                initial_data["firmware_update_available"] = available
             except Exception as e:
                 logger.debug(f"Could not fetch initial statistics: {e}")
 
-        # Profile info (active profile, target temp/weight)
+        # Profile info (active profile and targets from that profile)
+        # Set safe defaults first
+        initial_data["active_profile"] = None
+        initial_data["profile_author"] = None
+        initial_data["target_temperature"] = None
+        initial_data["target_weight"] = None
+
         if self.api:
             try:
                 api = self.api  # Capture reference to satisfy type checker
@@ -932,12 +954,29 @@ class MeticulousAddon:
                     and hasattr(last_profile, "profile")
                 ):
                     profile = last_profile.profile
-                    active_profile = getattr(profile, "name", None)
-                    if active_profile:
-                        initial_data["active_profile"] = active_profile
-                    initial_data["profile_author"] = getattr(profile, "author", None)
-                    initial_data["target_temperature"] = getattr(profile, "temperature", None)
-                    initial_data["target_weight"] = getattr(profile, "final_weight", None)
+                    profile_name = getattr(profile, "name", None)
+                    profile_id = getattr(last_profile, "id", None)
+
+                    if profile_name and profile_id:
+                        # Set this as the active profile on the machine
+                        try:
+                            payload = {
+                                "id": profile_id,
+                                "from": "app",
+                                "type": "focus",
+                            }
+                            await asyncio.get_running_loop().run_in_executor(
+                                None, lambda: api.send_profile_hover(payload)
+                            )
+                            logger.info(f"Set active profile to: {profile_name}")
+                        except Exception as e:
+                            logger.debug(f"Could not set active profile: {e}")
+
+                        # Use this profile's targets
+                        initial_data["active_profile"] = profile_name
+                        initial_data["profile_author"] = getattr(profile, "author", None)
+                        initial_data["target_temperature"] = getattr(profile, "temperature", None)
+                        initial_data["target_weight"] = getattr(profile, "final_weight", None)
             except Exception as e:
                 logger.debug(f"Could not fetch initial profile: {e}")
 
@@ -953,11 +992,12 @@ class MeticulousAddon:
             except Exception as e:
                 logger.debug(f"Could not fetch initial settings: {e}")
 
-        # Note: Status (state, sensors, brewing) and temperatures only available via Socket.IO
-        # These will be populated by real-time events after connection
+        # Note: Status (state, sensors, temperatures) only available via Socket.IO
+        # These will be updated by real-time events after connection
 
-        # Connectivity state
+        # Connectivity and brewing state (defaults for initial state)
         initial_data["connected"] = self.socket_connected
+        initial_data["brewing"] = False  # Default to not brewing until Socket.IO event received
 
         # Publish all available initial state
         await self.publish_to_homeassistant(initial_data)
@@ -1496,9 +1536,26 @@ class MeticulousAddon:
                 return
 
             new_profile_name = getattr(profile, "name", "Unknown")
+            profile_id = getattr(result, "id", None)
             profile_changed = new_profile_name != self.current_profile
 
             self.current_profile = new_profile_name
+
+            # Set this as the active profile on the machine
+            if profile_id:
+                try:
+                    payload = {
+                        "id": profile_id,
+                        "from": "app",
+                        "type": "focus",
+                    }
+                    await asyncio.get_running_loop().run_in_executor(
+                        None, lambda: api.send_profile_hover(payload)
+                    )
+                    if profile_changed:
+                        logger.info(f"Set active profile to: {new_profile_name}")
+                except Exception as e:
+                    logger.debug(f"Could not set active profile: {e}")
 
             profile_data = {
                 "active_profile": new_profile_name,
@@ -1537,16 +1594,39 @@ class MeticulousAddon:
                 last_shot = await asyncio.get_running_loop().run_in_executor(
                     None, lambda: api.get_last_shot()
                 )
+                last_shot_data = {}
                 if last_shot and not isinstance(last_shot, APIError):
                     last_shot_data = {
-                        "last_shot_name": last_shot.name,
-                        "last_shot_profile": last_shot.profile.name,
-                        "last_shot_rating": last_shot.rating or "none",
-                        "last_shot_time": datetime.fromtimestamp(last_shot.time).isoformat(),
+                        "last_shot_name": getattr(last_shot, "name", None),
+                        "last_shot_profile": (
+                            getattr(last_shot.profile, "name", None)
+                            if hasattr(last_shot, "profile")
+                            else None
+                        ),
+                        "last_shot_rating": getattr(last_shot, "rating", None) or "none",
+                    }
+                    # Handle timestamp safely
+                    shot_timestamp = getattr(last_shot, "time", None)
+                    if shot_timestamp:
+                        try:
+                            last_shot_data["last_shot_time"] = datetime.fromtimestamp(
+                                shot_timestamp
+                            ).isoformat()
+                        except (ValueError, OSError, TypeError):
+                            last_shot_data["last_shot_time"] = None
+                    else:
+                        last_shot_data["last_shot_time"] = None
+                else:
+                    # Ensure these are published even if fetch failed
+                    last_shot_data = {
+                        "last_shot_name": None,
+                        "last_shot_profile": None,
+                        "last_shot_rating": "none",
+                        "last_shot_time": None,
                     }
 
-                    await self.publish_to_homeassistant(last_shot_data)
-                    logger.debug(f"Last shot: {last_shot.name}")
+                await self.publish_to_homeassistant(last_shot_data)
+                logger.debug("Updated last shot data")
             except Exception as e:
                 logger.debug(
                     f"Could not retrieve last shot (firmware mismatch): " f"{type(e).__name__}"
@@ -1677,20 +1757,23 @@ class MeticulousAddon:
 
                     # Update firmware update availability sensor
                     if self.api and self.mqtt_enabled and self.mqtt_client:
+                        available = False
                         try:
                             update_status = self.api.check_for_updates()
-                            available = False
                             if update_status and not isinstance(update_status, APIError):
                                 available = getattr(update_status, "available", False)
-                            self.mqtt_client.publish(
-                                f"{self.state_prefix}/firmware_update_available/state",
-                                str(available).lower(),
-                                qos=1,
-                                retain=True,
-                            )
-                            logger.debug(f"Published firmware update availability: {available}")
                         except Exception as e:
-                            logger.debug(f"Could not update firmware update sensor: {e}")
+                            logger.debug(
+                                f"Could not fetch firmware update status during refresh: {e}"
+                            )
+                        # Always publish, even if check failed (defaults to False)
+                        self.mqtt_client.publish(
+                            f"{self.state_prefix}/firmware_update_available/state",
+                            str(available).lower(),
+                            qos=1,
+                            retain=True,
+                        )
+                        logger.debug(f"Published firmware update availability: {available}")
 
                     # Publish health metrics
                     await self.publish_health_metrics()

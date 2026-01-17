@@ -2,6 +2,16 @@
 
 All notable user-facing changes to this add-on are documented here.
 
+## [0.5.22] - 2026-01-17
+
+### 🐛 Bug Fixes
+- **Fixed sensor "Unknown" display** - All sensors now show proper values instead of "unknown" on startup
+  - **Brewing Status**: Now shows `false` until an extraction begins, then updates in real-time
+  - **Connected Status**: Displays actual Socket.IO connection state (true/false)
+  - **Target Temperature**: Always shows the active profile's target temperature
+  - **Last Shot Time**: Properly displays the timestamp of your last shot in ISO format
+- Guaranteed all sensor initial values are populated, preventing "unavailable" states in Home Assistant
+
 ## [0.5.21] - 2026-01-17
 
 ### ⚡ Performance
