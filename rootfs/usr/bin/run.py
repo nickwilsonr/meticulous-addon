@@ -1152,27 +1152,27 @@ class MeticulousAddon:
     # Throttling Helper
     # =========================================================================
 
-    def _should_publish_event(self, fields: Dict[str, Any]) -> bool:
-        """Check if ANY field in an event should be published (universal throttler).
+    def _filter_throttled_fields(self, fields: Dict[str, Any]) -> Dict[str, Any]:
+        """Filter out throttled fields from an event.
 
         For each field, checks if enough time has passed since last update.
-        Returns True if ANY field should be published, False if ALL are throttled.
-        Updates last_field_update_time for fields that are published.
+        Returns only fields that should be published (not throttled).
+        Updates last_field_update_time for each field checked.
         """
         current_time = time.time()
-        should_publish = False
+        fields_to_publish = {}
 
-        for field_name in fields.keys():
+        for field_name, field_value in fields.items():
             last_update = self.last_field_update_time.get(field_name, 0)
             time_since_last = current_time - last_update
 
-            # If enough time has passed, this field should be published
+            # If enough time has passed, include this field and record the time
             if time_since_last >= self.socket_io_throttle_interval:
-                should_publish = True
+                fields_to_publish[field_name] = field_value
                 # Record the time for this field
                 self.last_field_update_time[field_name] = current_time
 
-        return should_publish
+        return fields_to_publish
 
     # =========================================================================
     # Socket.IO Event Handlers
@@ -1237,10 +1237,11 @@ class MeticulousAddon:
                     sensor_data["target_pressure"] = getattr(setpoints, "pressure", None)
                     sensor_data["target_flow"] = getattr(setpoints, "flow", None)
 
-            # Check if ANY field should be published (universal throttler)
-            if self._should_publish_event(sensor_data) and self.loop:
+            # Filter to only non-throttled fields and publish
+            filtered_data = self._filter_throttled_fields(sensor_data)
+            if filtered_data and self.loop:
                 asyncio.run_coroutine_threadsafe(
-                    self.publish_to_homeassistant(sensor_data), self.loop
+                    self.publish_to_homeassistant(filtered_data), self.loop
                 )
 
             # Log during brewing
@@ -1278,10 +1279,11 @@ class MeticulousAddon:
                 t_bar_up = temps.t_bar_up
                 t_bar_down = temps.t_bar_down
 
-            # Check if ANY temperature sensor should be published (universal throttler)
-            if self._should_publish_event(temp_data) and self.loop:
+            # Filter to only non-throttled fields and publish
+            filtered_data = self._filter_throttled_fields(temp_data)
+            if filtered_data and self.loop:
                 asyncio.run_coroutine_threadsafe(
-                    self.publish_to_homeassistant(temp_data), self.loop
+                    self.publish_to_homeassistant(filtered_data), self.loop
                 )
 
             logger.debug(f"Temps: Boiler={t_bar_up:.1f}°C, " f"Brew Head={t_bar_down:.1f}°C")
