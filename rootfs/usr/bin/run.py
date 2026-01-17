@@ -1490,7 +1490,16 @@ class MeticulousAddon:
             # If brightness is in 0-1.0 range, convert to 0-100
             if isinstance(brightness, (int, float)) and 0 <= brightness <= 1:
                 settings["brightness"] = int(brightness * 100)
-        # This should capture brightness changes and other settings updates
+
+            # Publish brightness directly to MQTT since it's not in sensor mapping
+            if self.mqtt_client:
+                state_topic = f"{self.state_prefix}/set_brightness/state"
+                self.mqtt_client.publish(
+                    state_topic, str(settings["brightness"]), qos=1, retain=True
+                )
+                logger.info(f"Published brightness to {state_topic}: {settings['brightness']}")
+
+        # Publish other settings through normal routing
         if self.loop:
             asyncio.run_coroutine_threadsafe(self.publish_to_homeassistant(settings), self.loop)
 
