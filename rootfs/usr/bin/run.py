@@ -553,12 +553,6 @@ class MeticulousAddon:
                 "payload_on": "true",
                 "payload_off": "false",
             },
-            # Combined brightness: single number entity for both sensor and control
-            "brightness": {
-                "component": "number",
-                "state_topic": f"{base}/brightness/state",
-                "name": "Brightness",
-            },
             "firmware_update_available": {
                 "component": "binary_sensor",
                 "state_topic": f"{base}/firmware_update_available/state",
