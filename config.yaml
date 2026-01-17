@@ -32,7 +32,6 @@ ports:
 environment: {}
 options:
   machine_ip: "example: 192.168.1.100 or meticulous.local"
-  socket_io_throttle_interval: 2
   stale_data_refresh_interval: 24
   debug: false
   mqtt_enabled: true
@@ -58,7 +57,6 @@ options:
   brightness_delta: 1
 schema:
   machine_ip: str?
-  socket_io_throttle_interval: int(1,10)?
   stale_data_refresh_interval: int(1,168)?
   debug: bool?
   mqtt_enabled: bool?

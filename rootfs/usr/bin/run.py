@@ -70,8 +70,7 @@ class MeticulousAddon:
         if raw_machine_ip.lower().startswith("example") or " " in raw_machine_ip:
             raw_machine_ip = ""
         self.machine_ip = raw_machine_ip
-        # Throttling and refresh configuration
-        self.socket_io_throttle_interval = int(self.config.get("socket_io_throttle_interval", 2))
+        # Refresh configuration
         stale_interval_hours = int(self.config.get("stale_data_refresh_interval", 24))
         self.stale_data_refresh_interval = stale_interval_hours * 3600
 
@@ -114,8 +113,6 @@ class MeticulousAddon:
         # Track last values for each field (for delta filtering)
         self.last_field_values: Dict[str, Any] = {}
 
-        # Track last update time per field for universal throttling
-        self.last_field_update_time: Dict[str, float] = {}
         self.last_stale_refresh_time = time.time()
         self.running = False
         self.socket_connected = False
@@ -1700,8 +1697,8 @@ class MeticulousAddon:
                         f">= {self.stale_data_refresh_interval}s"
                     )
                     self.last_stale_refresh_time = current_time
-                    # Clear field throttle tracking to allow immediate republish
-                    self.last_field_update_time.clear()
+                    # Clear field value tracking to allow fresh delta calculations after refresh
+                    self.last_field_values.clear()
 
                 # Sleep briefly to allow responsive discovery checks without blocking
                 await asyncio.sleep(0.5)
@@ -1716,7 +1713,7 @@ class MeticulousAddon:
         logger.info("Starting Meticulous Espresso Add-on")
         logger.info(
             f"Configuration: machine_ip={self.machine_ip}, "
-            f"throttle_interval={self.socket_io_throttle_interval}s"
+            f"delta_filtering={'enabled' if self.enable_delta_filtering else 'disabled'}"
         )
         if not self.machine_ip:
             logger.error(
@@ -1781,9 +1778,9 @@ def main():
     """Entry point for the add-on."""
     addon = MeticulousAddon()
     logger.info(
-        f"Throttle interval set to {addon.socket_io_throttle_interval}s, "
+        f"Delta-based filtering {'enabled' if addon.enable_delta_filtering else 'disabled'}, "
         f"stale data refresh every {addon.stale_data_refresh_interval // 3600}h. "
-        "Update 'socket_io_throttle_interval' and 'stale_data_refresh_interval' to configure."
+        "Configure delta thresholds in add-on options."
     )
     try:
         asyncio.run(addon.run())

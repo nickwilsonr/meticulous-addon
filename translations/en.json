@@ -4,10 +4,6 @@
       "name": "Machine IP Address or Hostname",
       "description": "The IP address or hostname of your Meticulous Espresso machine (e.g., 192.168.1.100 or meticulous.local)"
     },
-    "socket_io_throttle_interval": {
-      "name": "Chatty Sensor Throttle Interval",
-      "description": "How long to wait between Socket.IO sensor updates (in seconds, 1-10). Prevents MQTT flooding from chatty sensors like pressure and temperature. Each sensor tracked independently. (Default: 2)"
-    },
     "stale_data_refresh_interval": {
       "name": "Stale Data Refresh Interval",
       "description": "Force a full refresh of all sensor data after this time with no updates (in hours, 1-168). Ensures non-chatty sensors (settings, statistics, profile info) are periodically refreshed so Home Assistant doesn't forget them. (Default: 24)"
