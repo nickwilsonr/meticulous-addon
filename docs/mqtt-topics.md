@@ -58,7 +58,7 @@ meticulous_espresso/sensor/model/state                  → "Meticulous Pro"
 meticulous_espresso/sensor/serial/state                 → "ABC123456"
 meticulous_espresso/sensor/voltage/state                → 120
 meticulous_espresso/sensor/sounds_enabled/state         → true/false
-meticulous_espresso/sensor/brightness/state             → 0.75
+meticulous_espresso/sensor/brightness/state             → 75
 meticulous_espresso/sensor/total_shots/state            → 1234
 meticulous_espresso/sensor/last_shot_name/state         → "Espresso"
 ```
@@ -82,8 +82,8 @@ meticulous_espresso/command/load_profile
 	Payload: "profile-id-string"
 
 meticulous_espresso/command/set_brightness
-	Payload (simple): "0.75"
-	Payload (advanced): {"brightness": 0.75, "interpolation": "curve", "animation_time": 0.5}
+	Payload (simple): "75"
+	Payload (advanced): {"brightness": 75, "interpolation": "curve", "animation_time": 500}
 
 meticulous_espresso/command/enable_sounds
 	Payload: "true" | "false" | "1" | "0" | "on" | "off" | "yes" | "no"
@@ -210,7 +210,7 @@ mosquitto_pub -h localhost -t meticulous_espresso/command/start_brew -m ""
 mosquitto_pub -h localhost -t meticulous_espresso/command/stop_brew -m ""
 
 # Set brightness
-mosquitto_pub -h localhost -t meticulous_espresso/command/set_brightness -m "0.75"
+mosquitto_pub -h localhost -t meticulous_espresso/command/set_brightness -m "75"
 
 # Enable sounds
 mosquitto_pub -h localhost -t meticulous_espresso/command/enable_sounds -m "true"

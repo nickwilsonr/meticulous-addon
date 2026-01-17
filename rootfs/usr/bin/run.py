@@ -595,8 +595,7 @@ class MeticulousAddon:
                 "command_suffix": "set_brightness",
                 "type": "number",
                 "min": 0,
-                "max": 1,
-                "step": 0.01,
+                "max": 100,
             },
         }
 
@@ -752,8 +751,8 @@ class MeticulousAddon:
                         "device": device,
                         "icon": cmd["icon"],
                         "min": cmd.get("min", 0),
-                        "max": cmd.get("max", 1),
-                        "step": cmd.get("step", 0.01),
+                        "max": cmd.get("max", 100),
+                        "unit_of_measurement": "%",
                     }
                     # Log first command payload as example
                     if not sample_cmd_logged:
