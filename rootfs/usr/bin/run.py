@@ -167,6 +167,7 @@ class MeticulousAddon:
         self.mqtt_connect_attempt = 0  # Track retry attempts
         self.mqtt_next_retry_time = 0.0  # Track when to retry MQTT
         self.mqtt_discovery_pending = False  # Flag to publish discovery from main loop
+        self.initial_profile_to_publish = None  # Store profile name to publish after discovery
 
         # Fetch MQTT credentials from Supervisor if not provided in config
         if self.mqtt_enabled and not (self.mqtt_username and self.mqtt_password):
@@ -858,6 +859,17 @@ class MeticulousAddon:
 
         logger.info(f"Discovery complete: published {discovery_count} configs with QoS 1")
 
+        # Publish active profile state after discovery so HA recognizes the entity
+        if self.initial_profile_to_publish and self.mqtt_client:
+            state_topic = f"{self.state_prefix}/active_profile/state"
+            self.mqtt_client.publish(
+                state_topic, self.initial_profile_to_publish, qos=1, retain=True
+            )
+            logger.info(
+                f"Published initial active_profile state: {self.initial_profile_to_publish}"
+            )
+            self.initial_profile_to_publish = None
+
     async def _mqtt_publish_initial_state(self) -> None:
         """Fetch and publish initial state of all sensors (T0 snapshot).
 
@@ -966,16 +978,15 @@ class MeticulousAddon:
                             logger.debug(f"Could not set active profile: {e}")
 
                         # Use this profile's targets
-                        initial_data["active_profile"] = profile_name
                         initial_data["profile_author"] = getattr(profile, "author", None)
                         initial_data["target_temperature"] = getattr(profile, "temperature", None)
                         initial_data["target_weight"] = getattr(profile, "final_weight", None)
 
-                        # Publish active profile state to SELECT entity immediately
-                        if self.mqtt_enabled and self.mqtt_client:
-                            state_topic = f"{self.state_prefix}/active_profile/state"
-                            self.mqtt_client.publish(state_topic, profile_name, qos=1, retain=True)
-                            logger.info(f"Published active_profile state: {profile_name}")
+                        # Store profile name to publish after discovery is sent
+                        self.initial_profile_to_publish = profile_name
+                        logger.info(
+                            f"Stored initial profile to publish after discovery: {profile_name}"
+                        )
 
             except Exception as e:
                 logger.debug(f"Could not fetch initial profile: {e}")
