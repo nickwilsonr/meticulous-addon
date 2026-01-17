@@ -53,7 +53,10 @@ def handle_command_start_brew(addon: "MeticulousAddon"):
         logger.error("Cannot start brew: API not connected")
         return
     try:
-        # Call the HTTP endpoint directly instead of using pymeticulous wrapper
+        # Call the HTTP endpoint directly instead of using pymeticulous wrapper.
+        # The wrapper has a bug (PR #20) where it uses string repr of ActionType enum
+        # instead of ActionType.value, producing /api/v1/action/ActionType.START
+        # instead of /api/v1/action/start. Using direct HTTP bypasses this.
         response = addon.api.session.get(f"{addon.api.base_url}/api/v1/action/start")
         result = response.json()
         status = result.get("status")
@@ -70,7 +73,10 @@ def handle_command_stop_brew(addon: "MeticulousAddon"):
         logger.error("Cannot stop brew: API not connected")
         return
     try:
-        # Call the HTTP endpoint directly instead of using pymeticulous wrapper
+        # Call the HTTP endpoint directly instead of using pymeticulous wrapper.
+        # The wrapper has a bug (PR #20) where it uses string repr of ActionType enum
+        # instead of ActionType.value, producing /api/v1/action/ActionType.STOP
+        # instead of /api/v1/action/stop. Using direct HTTP bypasses this.
         response = addon.api.session.get(f"{addon.api.base_url}/api/v1/action/stop")
         result = response.json()
         status = result.get("status")
@@ -87,7 +93,10 @@ def handle_command_continue_brew(addon: "MeticulousAddon"):
         logger.error("Cannot continue brew: API not connected")
         return
     try:
-        # Call the HTTP endpoint directly instead of using pymeticulous wrapper
+        # Call the HTTP endpoint directly instead of using pymeticulous wrapper.
+        # The wrapper has a bug (PR #20) where it uses string repr of ActionType enum
+        # instead of ActionType.value, producing /api/v1/action/ActionType.CONTINUE
+        # instead of /api/v1/action/continue. Using direct HTTP bypasses this.
         response = addon.api.session.get(f"{addon.api.base_url}/api/v1/action/continue")
         result = response.json()
         status = result.get("status")
@@ -104,7 +113,10 @@ def handle_command_preheat(addon: "MeticulousAddon"):
         logger.error("Cannot preheat: API not connected")
         return
     try:
-        # Call the HTTP endpoint directly instead of using pymeticulous wrapper
+        # Call the HTTP endpoint directly instead of using pymeticulous wrapper.
+        # The wrapper has a bug (PR #20) where it uses string repr of ActionType enum
+        # instead of ActionType.value, producing /api/v1/action/ActionType.PREHEAT
+        # instead of /api/v1/action/preheat. Using direct HTTP bypasses this.
         response = addon.api.session.get(f"{addon.api.base_url}/api/v1/action/preheat")
         result = response.json()
         status = result.get("status")
@@ -121,8 +133,10 @@ def handle_command_tare_scale(addon: "MeticulousAddon"):
         logger.error("Cannot tare scale: API not connected")
         return
     try:
-        # Call the HTTP endpoint directly instead of using pymeticulous wrapper
-        # This bypasses any potential issues with the wrapper's deserialization
+        # Call the HTTP endpoint directly instead of using pymeticulous wrapper.
+        # The wrapper has a bug (PR #20) where it uses string repr of ActionType enum
+        # instead of ActionType.value, producing /api/v1/action/ActionType.TARE
+        # instead of /api/v1/action/tare. Using direct HTTP bypasses this.
         response = addon.api.session.get(f"{addon.api.base_url}/api/v1/action/tare")
         result = response.json()
         status = result.get("status")
@@ -206,7 +220,9 @@ def handle_command_enable_sounds(addon: "MeticulousAddon", payload: str):
     try:
         enabled = payload.lower() in ("true", "1", "on", "yes")
         try:
-            # Call the HTTP endpoint directly instead of using pymeticulous wrapper
+            # Call the HTTP endpoint directly instead of using pymeticulous wrapper.
+            # The wrapper tries to deserialize settings response which may have schema
+            # mismatches. Direct HTTP gives us full control over response handling.
             request_data = {"enable_sounds": enabled}
             response = addon.api.session.post(
                 f"{addon.api.base_url}/api/v1/settings", json=request_data
@@ -229,7 +245,9 @@ def handle_command_reboot_machine(addon: "MeticulousAddon"):
         logger.error("Cannot reboot machine: API not connected")
         return
     try:
-        # Call the HTTP endpoint directly instead of using pymeticulous wrapper
+        # Call the HTTP endpoint directly instead of using pymeticulous wrapper.
+        # The wrapper tries to deserialize reboot response which may have schema
+        # mismatches. Direct HTTP gives us full control over response handling.
         response = addon.api.session.post(f"{addon.api.base_url}/api/v1/machine/reboot")
         if response.status_code == 200:
             logger.info("reboot_machine: Success")
