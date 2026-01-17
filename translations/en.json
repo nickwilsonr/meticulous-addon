@@ -4,13 +4,13 @@
       "name": "Machine IP Address",
       "description": "The IP address or hostname of your Meticulous Espresso machine (e.g., 192.168.1.100 or meticulous.local)"
     },
-    "scan_interval": {
-      "name": "Scan Interval",
-      "description": "How often to poll the machine for updates (in seconds)"
+    "socket_io_throttle_interval": {
+      "name": "Socket.IO Throttle Interval",
+      "description": "How long to wait between Socket.IO sensor updates (in seconds, 1-10). Prevents MQTT flooding from chatty sensors like pressure and temperature. Each sensor tracked independently."
     },
-    "refresh_rate_minutes": {
-      "name": "Sensor Refresh Rate",
-      "description": "How often to refresh sensor state in minutes (recommended: 5-10). Higher values reduce system load."
+    "stale_data_refresh_interval": {
+      "name": "Stale Data Refresh Interval",
+      "description": "Force a full refresh of all sensor data after this time with no updates (in hours, 1-168). Default 24 hours. Ensures no data gets stuck if Socket.IO stops sending updates."
     },
     "debug": {
       "name": "Debug Mode",
