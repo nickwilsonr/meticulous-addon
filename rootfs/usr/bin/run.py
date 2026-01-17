@@ -76,20 +76,25 @@ class MeticulousAddon:
 
         # Delta-based filtering configuration
         self.enable_delta_filtering = bool(self.config.get("enable_delta_filtering", True))
+        temperature_delta = float(self.config.get("temperature_delta", 0.5))
+        pressure_delta = float(self.config.get("pressure_delta", 0.2))
+        flow_delta = float(self.config.get("flow_delta", 0.1))
+        weight_delta = float(self.config.get("weight_delta", 0.1))
+        time_delta = float(self.config.get("time_delta", 0.1))
         self.sensor_deltas: Dict[str, float] = {
-            "boiler_temperature": float(self.config.get("boiler_temperature_delta", 0.5)),
-            "brew_head_temperature": float(self.config.get("brew_head_temperature_delta", 0.5)),
-            "external_temp_1": float(self.config.get("external_temp_1_delta", 0.5)),
-            "external_temp_2": float(self.config.get("external_temp_2_delta", 0.5)),
-            "pressure": float(self.config.get("pressure_delta", 0.2)),
-            "flow_rate": float(self.config.get("flow_rate_delta", 0.1)),
-            "shot_weight": float(self.config.get("shot_weight_delta", 0.1)),
-            "shot_timer": float(self.config.get("shot_timer_delta", 1.0)),
-            "elapsed_time": float(self.config.get("elapsed_time_delta", 1.0)),
-            "target_temperature": float(self.config.get("target_temperature_delta", 0.0)),
-            "target_weight": float(self.config.get("target_weight_delta", 0.0)),
-            "target_pressure": float(self.config.get("target_pressure_delta", 0.0)),
-            "target_flow": float(self.config.get("target_flow_delta", 0.0)),
+            "boiler_temperature": temperature_delta,
+            "brew_head_temperature": temperature_delta,
+            "external_temp_1": temperature_delta,
+            "external_temp_2": temperature_delta,
+            "pressure": pressure_delta,
+            "flow_rate": flow_delta,
+            "shot_weight": weight_delta,
+            "shot_timer": time_delta,
+            "elapsed_time": time_delta,
+            "target_temperature": temperature_delta,
+            "target_weight": weight_delta,
+            "target_pressure": pressure_delta,
+            "target_flow": flow_delta,
             "voltage": float(self.config.get("voltage_delta", 1.0)),
             "brightness": float(self.config.get("brightness_delta", 1.0)),
         }

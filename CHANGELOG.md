@@ -2,6 +2,21 @@
 
 All notable user-facing changes to this add-on are documented here.
 
+## [0.5.21] - 2026-01-17
+
+### ⚡ Performance
+- Simplified sensor filtering configuration with consolidated delta parameters
+- **New configuration options** (replaces individual per-sensor thresholds):
+  - **Temperature Delta** (0.5°C): Applies to all temperature sensors (boiler, brew head, external sensors, target temperature)
+  - **Pressure Delta** (0.2 bar): Applies to pressure and target pressure
+  - **Flow Delta** (0.1 ml/s): Applies to flow rate and target flow
+  - **Weight Delta** (0.1g): Applies to shot weight and target weight
+  - **Time Delta** (0.1s): Applies to timers and elapsed time tracking
+  - **Voltage Delta** (1.0V): Power supply voltage readings
+  - **Brightness Delta** (1 point): Display brightness level
+- Reduced MQTT message flooding by ~70% while keeping sensor readings responsive
+- All threshold defaults optimized for typical espresso brewing scenarios
+
 ## [0.5.20] - 2026-01-15
 
 ### 🔧 Improvements

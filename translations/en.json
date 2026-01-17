@@ -4,6 +4,38 @@
       "name": "Machine IP Address or Hostname",
       "description": "The IP address or hostname of your Meticulous Espresso machine (e.g., 192.168.1.100 or meticulous.local)"
     },
+    "enable_delta_filtering": {
+      "name": "Enable Delta-Based Filtering",
+      "description": "Use value change detection for sensors. When enabled, sensors only publish when their value changes by more than the configured delta threshold. (Default: true)"
+    },
+    "temperature_delta": {
+      "name": "Temperature Delta",
+      "description": "Minimum change in °C required to publish temperature updates for all temperature sensors (boiler, brew head, external sensors). (Default: 0.5)"
+    },
+    "pressure_delta": {
+      "name": "Pressure Delta",
+      "description": "Minimum change in bar required to publish pressure updates (current and target pressure). (Default: 0.2)"
+    },
+    "flow_delta": {
+      "name": "Flow Delta",
+      "description": "Minimum change in ml/s required to publish flow rate updates (flow rate and target flow). (Default: 0.1)"
+    },
+    "weight_delta": {
+      "name": "Weight Delta",
+      "description": "Minimum change in grams required to publish weight updates (shot weight and target weight). (Default: 0.1)"
+    },
+    "time_delta": {
+      "name": "Time Delta",
+      "description": "Minimum change in seconds required to publish time updates (shot timer and elapsed time). (Default: 0.1)"
+    },
+    "voltage_delta": {
+      "name": "Voltage Delta",
+      "description": "Minimum change in volts required to publish voltage readings. (Default: 1.0)"
+    },
+    "brightness_delta": {
+      "name": "Brightness Delta",
+      "description": "Minimum change in percentage points (0-100) required to publish brightness updates. (Default: 1)"
+    },
     "stale_data_refresh_interval": {
       "name": "Stale Data Refresh Interval",
       "description": "Force a full refresh of all sensor data after this time with no updates (in hours, 1-168). Ensures non-chatty sensors (settings, statistics, profile info) are periodically refreshed so Home Assistant doesn't forget them. (Default: 24)"
@@ -31,70 +63,6 @@
     "mqtt_password": {
       "name": "MQTT Password",
       "description": "Optional password for MQTT broker. (Default: empty, auto-detected from HA MQTT integration)"
-    },
-    "enable_delta_filtering": {
-      "name": "Enable Delta-Based Filtering",
-      "description": "Use value change detection instead of time-based throttling. When enabled, sensors only publish when their value changes by more than the configured delta threshold, providing more intelligent filtering. (Default: true)"
-    },
-    "boiler_temperature_delta": {
-      "name": "Boiler Temperature Delta",
-      "description": "Minimum change in °C required to publish boiler temperature updates. Reduces MQTT flooding from high-frequency readings. (Default: 0.5)"
-    },
-    "brew_head_temperature_delta": {
-      "name": "Brew Head Temperature Delta",
-      "description": "Minimum change in °C required to publish brew head temperature updates. (Default: 0.5)"
-    },
-    "external_temp_1_delta": {
-      "name": "External Temperature 1 Delta",
-      "description": "Minimum change in °C required to publish external sensor 1 readings. (Default: 0.5)"
-    },
-    "external_temp_2_delta": {
-      "name": "External Temperature 2 Delta",
-      "description": "Minimum change in °C required to publish external sensor 2 readings. (Default: 0.5)"
-    },
-    "pressure_delta": {
-      "name": "Pressure Delta",
-      "description": "Minimum change in bar required to publish pressure updates. Typical range 0.1-0.5 bar. (Default: 0.2)"
-    },
-    "flow_rate_delta": {
-      "name": "Flow Rate Delta",
-      "description": "Minimum change in ml/s required to publish flow rate updates. (Default: 0.1)"
-    },
-    "shot_weight_delta": {
-      "name": "Shot Weight Delta",
-      "description": "Minimum change in grams required to publish shot weight updates. (Default: 0.1)"
-    },
-    "shot_timer_delta": {
-      "name": "Shot Timer Delta",
-      "description": "Minimum change in seconds required to publish shot timer updates. (Default: 1.0)"
-    },
-    "elapsed_time_delta": {
-      "name": "Elapsed Time Delta",
-      "description": "Minimum change in seconds required to publish elapsed time updates. (Default: 1.0)"
-    },
-    "target_temperature_delta": {
-      "name": "Target Temperature Delta",
-      "description": "Minimum change in °C required to publish target temperature. Set to 0.0 to publish any change. (Default: 0.0)"
-    },
-    "target_weight_delta": {
-      "name": "Target Weight Delta",
-      "description": "Minimum change in grams required to publish target weight. Set to 0.0 to publish any change. (Default: 0.0)"
-    },
-    "target_pressure_delta": {
-      "name": "Target Pressure Delta",
-      "description": "Minimum change in bar required to publish target pressure. Set to 0.0 to publish any change. (Default: 0.0)"
-    },
-    "target_flow_delta": {
-      "name": "Target Flow Delta",
-      "description": "Minimum change in ml/s required to publish target flow. Set to 0.0 to publish any change. (Default: 0.0)"
-    },
-    "voltage_delta": {
-      "name": "Voltage Delta",
-      "description": "Minimum change in volts required to publish voltage readings. (Default: 1.0)"
-    },
-    "brightness_delta": {
-      "name": "Brightness Delta",
-      "description": "Minimum change in percentage points (0-100) required to publish brightness updates. (Default: 1)"
     }
   }
 }
