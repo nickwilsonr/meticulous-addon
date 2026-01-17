@@ -1845,6 +1845,12 @@ class MeticulousAddon:
         finally:
             self.running = False
 
+            # Publish disconnected state
+            try:
+                await self.publish_connectivity(False)
+            except Exception as e:
+                logger.debug(f"Error publishing final connectivity state: {e}")
+
             # Cleanup
             if self.api and self.socket_connected:
                 try:
