@@ -8,8 +8,6 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from run import MeticulousAddon
 
-from meticulous.api_types import APIError, PartialSettings
-
 logger = logging.getLogger(__name__)
 
 
@@ -207,13 +205,21 @@ def handle_command_enable_sounds(addon: "MeticulousAddon", payload: str):
         return
     try:
         enabled = payload.lower() in ("true", "1", "on", "yes")
-        settings = PartialSettings(enable_sounds=enabled)
-        result = addon.api.update_setting(settings)
-        if isinstance(result, APIError):
-            logger.error(f"enable_sounds failed: {result.error}")
-        else:
-            logger.info(f"enable_sounds: Success ({enabled})")
-            _run_or_schedule(addon.update_settings())
+        try:
+            # Call the HTTP endpoint directly instead of using pymeticulous wrapper
+            request_data = {"enable_sounds": enabled}
+            response = addon.api.session.post(
+                f"{addon.api.base_url}/api/v1/settings", json=request_data
+            )
+            if response.status_code == 200:
+                logger.info(f"enable_sounds: Success ({enabled})")
+                _run_or_schedule(addon.update_settings())
+            else:
+                logger.error(
+                    f"enable_sounds failed with status {response.status_code}: " f"{response.text}"
+                )
+        except Exception as e:
+            logger.error(f"enable_sounds error: {e}", exc_info=True)
     except Exception as e:
         logger.error(f"enable_sounds error: {e}", exc_info=True)
 
@@ -223,11 +229,14 @@ def handle_command_reboot_machine(addon: "MeticulousAddon"):
         logger.error("Cannot reboot machine: API not connected")
         return
     try:
-        result = addon.api.reboot_machine()
-        if isinstance(result, APIError):
-            logger.error(f"reboot_machine failed: {result.error}")
-        else:
+        # Call the HTTP endpoint directly instead of using pymeticulous wrapper
+        response = addon.api.session.post(f"{addon.api.base_url}/api/v1/machine/reboot")
+        if response.status_code == 200:
             logger.info("reboot_machine: Success")
+        else:
+            logger.error(
+                f"reboot_machine failed with status {response.status_code}: " f"{response.text}"
+            )
     except Exception as e:
         logger.error(f"reboot_machine error: {e}", exc_info=True)
 
