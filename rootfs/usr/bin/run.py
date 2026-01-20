@@ -911,14 +911,15 @@ class MeticulousAddon:
                             getattr(last_shot, "rating", None) or "none"
                         )
 
-                        # Handle last_shot_time - convert timestamp to ISO format
+                        # Handle last_shot_time - convert timestamp to ISO format with timezone
                         shot_timestamp = getattr(last_shot, "time", None)
                         logger.debug(
                             f"shot_timestamp: {shot_timestamp}, type: {type(shot_timestamp)}"
                         )
-                        if shot_timestamp:
+                        if shot_timestamp is not None:
                             try:
-                                shot_time = datetime.fromtimestamp(shot_timestamp)
+                                # Convert Unix timestamp to timezone-aware datetime (local timezone)
+                                shot_time = datetime.fromtimestamp(shot_timestamp).astimezone()
                                 initial_data["last_shot_time"] = shot_time.isoformat()
                                 logger.info(
                                     f"Converted shot_timestamp {shot_timestamp} to "
@@ -1607,14 +1608,15 @@ class MeticulousAddon:
                     last_shot_data["last_shot_rating"] = (
                         getattr(last_shot, "rating", None) or "none"
                     )
-                    # Handle timestamp safely
+                    # Handle timestamp safely - convert to timezone-aware ISO format
                     shot_timestamp = getattr(last_shot, "time", None)
                     logger.debug(f"shot_timestamp: {shot_timestamp}, type: {type(shot_timestamp)}")
-                    if shot_timestamp:
+                    if shot_timestamp is not None:
                         try:
-                            last_shot_data["last_shot_time"] = datetime.fromtimestamp(
-                                shot_timestamp
-                            ).isoformat()
+                            # Convert Unix timestamp to timezone-aware datetime (local timezone)
+                            last_shot_data["last_shot_time"] = (
+                                datetime.fromtimestamp(shot_timestamp).astimezone().isoformat()
+                            )
                             logger.info(
                                 f"Converted shot_timestamp {shot_timestamp} to "
                                 f"{last_shot_data['last_shot_time']}"
