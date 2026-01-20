@@ -424,7 +424,7 @@ class MeticulousAddon:
                     self.mqtt_client.publish(topic, payload, qos=1, retain=True)
                     published_fields.append(key)
                 if published_fields:
-                    logger.info(f"Published initial state: {', '.join(published_fields)}")
+                    logger.debug(f"Published initial state: {', '.join(published_fields)}")
             except Exception as e:
                 logger.warning(f"MQTT publish failed: {e}")
 
@@ -634,9 +634,9 @@ class MeticulousAddon:
             logger.debug("Skipping discovery publish: mqtt not ready")
             return
 
-        logger.info("Starting MQTT Home Assistant discovery publish")
+        logger.debug("Starting MQTT Home Assistant discovery publish")
         is_connected = self.mqtt_client.is_connected()
-        logger.info(f"Client connection at start: is_connected={is_connected}")
+        logger.debug(f"Client connection at start: is_connected={is_connected}")
 
         if not is_connected:
             logger.error("MQTT not connected - aborting discovery")
@@ -729,7 +729,7 @@ class MeticulousAddon:
 
                 # Log first sensor payload as example
                 if not sample_payload_logged:
-                    logger.info(
+                    logger.debug(
                         f"SAMPLE SENSOR DISCOVERY PAYLOAD ({key}): "
                         f"topic={config_topic}, payload={jsonlib.dumps(payload)}"
                     )
@@ -769,7 +769,7 @@ class MeticulousAddon:
                     }
                     # Log first command payload as example
                     if not sample_cmd_logged:
-                        logger.info(
+                        logger.debug(
                             f"SAMPLE COMMAND DISCOVERY PAYLOAD ({key}): "
                             f"topic={config_topic}, payload={jsonlib.dumps(payload)}"
                         )
@@ -935,7 +935,7 @@ class MeticulousAddon:
                                 # Convert Unix timestamp to timezone-aware datetime (local timezone)
                                 shot_time = datetime.fromtimestamp(shot_timestamp).astimezone()
                                 initial_data["last_shot_time"] = shot_time.isoformat()
-                                logger.info(
+                                logger.debug(
                                     f"Converted shot_timestamp {shot_timestamp} to "
                                     f"{initial_data['last_shot_time']}"
                                 )
@@ -958,7 +958,7 @@ class MeticulousAddon:
                 last_profile = await asyncio.get_running_loop().run_in_executor(
                     None, lambda: api.get_last_profile()
                 )
-                logger.info(
+                logger.debug(
                     f"get_last_profile returned: {last_profile}, type: {type(last_profile)}"
                 )
                 if (
@@ -1033,7 +1033,7 @@ class MeticulousAddon:
         initial_data["connected"] = self.socket_connected
         # Infer brewing false (safe: machine idle until Socket.IO indicates otherwise)
         initial_data["brewing"] = False
-        logger.info(
+        logger.debug(
             f"Initial state: connected={initial_data['connected']}, "
             f"brewing={initial_data['brewing']}, "
             f"socket_connected={self.socket_connected}"
@@ -1041,7 +1041,7 @@ class MeticulousAddon:
 
         # Publish all available initial state
         await self.publish_to_homeassistant(initial_data)
-        logger.info(f"Published initial state for {len(initial_data)} sensors")
+        logger.debug(f"Published initial state for {len(initial_data)} sensors")
 
     async def fetch_available_profiles(self):
         """Fetch list of available profiles from the machine."""
@@ -1077,7 +1077,7 @@ class MeticulousAddon:
                     if profile_id:
                         self.available_profiles[profile_id] = profile_name
 
-                logger.info(f"Fetched {len(self.available_profiles)} available profiles")
+                logger.debug(f"Fetched {len(self.available_profiles)} available profiles")
                 # Detect and log profile list changes
                 if old_profiles != self.available_profiles:
                     added = set(self.available_profiles.keys()) - set(old_profiles.keys())
@@ -1200,7 +1200,7 @@ class MeticulousAddon:
 
             # Set callbacks
             def on_connect(client, userdata, flags, rc):
-                logger.info(f"on_connect callback fired: rc={rc}")
+                logger.debug(f"on_connect callback fired: rc={rc}")
                 if rc == 0:
                     logger.info(f"MQTT connected to {self.mqtt_host}:{self.mqtt_port}")
                     # Subscribe to homeassistant/# BEFORE publishing discovery (zigbee2mqtt pattern)
@@ -1215,7 +1215,7 @@ class MeticulousAddon:
                     )
                     logger.info(f"Published online status: rc={online_result.rc}")
                     # Set flag to publish discovery from main event loop (thread-safe)
-                    logger.info("Setting mqtt_discovery_pending=True")
+                    logger.debug("Setting mqtt_discovery_pending=True")
                     self.mqtt_discovery_pending = True
                     # Publish initial state on successful connection
                     if self.loop:
@@ -1469,7 +1469,7 @@ class MeticulousAddon:
     def _handle_profile_event(self, profile_event: Any):
         """Handle profile change events from Socket.IO."""
         try:
-            logger.info(f"Profile changed: {profile_event}")
+            logger.debug(f"Profile changed: {profile_event}")
             # Update current profile
             # Fetch full profile details if needed
             if self.loop:
@@ -1511,13 +1511,13 @@ class MeticulousAddon:
 
     def _handle_button_event(self, button: Any):
         """Handle button events from Socket.IO (e.g., tare button)."""
-        logger.info(f"Button event received: {button}")
+        logger.debug(f"Button event received: {button}")
         # Button events could trigger updates or actions
         # For now, just log them to understand what events come through
 
     def _handle_settings_change_event(self, settings: Dict):
         """Handle settings change events from Socket.IO (e.g., brightness)."""
-        logger.info(f"Settings change event received: {settings}")
+        logger.debug(f"Settings change event received: {settings}")
         # Publish all settings through normal routing (includes delta filtering)
         if self.loop:
             asyncio.run_coroutine_threadsafe(self.publish_to_homeassistant(settings), self.loop)
@@ -1587,7 +1587,7 @@ class MeticulousAddon:
                         None, lambda: api.send_profile_hover(payload)
                     )
                     if profile_changed:
-                        logger.info(f"Set active profile to: {new_profile_name}")
+                        logger.debug(f"Set active profile to: {new_profile_name}")
                 except Exception as e:
                     logger.debug(f"Could not set active profile: {e}")
 
@@ -1602,11 +1602,11 @@ class MeticulousAddon:
             if self.mqtt_enabled and self.mqtt_client:
                 state_topic = f"{self.state_prefix}/active_profile/state"
                 self.mqtt_client.publish(state_topic, new_profile_name, qos=1, retain=True)
-                logger.info(f"Published active_profile state: {new_profile_name}")
+                logger.debug(f"Published active_profile state: {new_profile_name}")
 
             await self.publish_to_homeassistant(profile_data)
             if profile_changed:
-                logger.info(f"Profile changed to: {new_profile_name}")
+                logger.debug(f"Profile changed to: {new_profile_name}")
 
         except Exception as e:
             logger.error(f"Error updating profile info: {e}", exc_info=True)
@@ -1654,7 +1654,7 @@ class MeticulousAddon:
                             last_shot_data["last_shot_time"] = (
                                 datetime.fromtimestamp(shot_timestamp).astimezone().isoformat()
                             )
-                            logger.info(
+                            logger.debug(
                                 f"Converted shot_timestamp {shot_timestamp} to "
                                 f"{last_shot_data['last_shot_time']}"
                             )
@@ -1771,7 +1771,7 @@ class MeticulousAddon:
                     except Exception as e:
                         logger.error(f"Error publishing MQTT discovery: {e}", exc_info=True)
                 elif self.mqtt_discovery_pending:
-                    logger.info(
+                    logger.debug(
                         f"Discovery NOT published: pending=True, enabled={self.mqtt_enabled}, "
                         f"client={self.mqtt_client is not None}"
                     )
@@ -1800,7 +1800,7 @@ class MeticulousAddon:
 
                     # Log if stale refresh occurred
                     # Log stale refresh
-                    logger.info(
+                    logger.debug(
                         f"Stale data refresh triggered: {time_since_last_stale_refresh:.1f}s "
                         f">= {self.stale_data_refresh_interval}s"
                     )
