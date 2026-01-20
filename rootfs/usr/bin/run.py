@@ -403,13 +403,23 @@ class MeticulousAddon:
             try:
                 published_count = 0
                 for key, value in sensor_data.items():
+                    # Skip None values - don't publish them
+                    if value is None:
+                        continue
+
                     mapping = self._mqtt_sensor_mapping().get(key)
                     if not mapping:
                         continue
                     topic = mapping["state_topic"]
-                    payload = (
-                        str(value) if not isinstance(value, (dict, list)) else jsonlib.dumps(value)
-                    )
+                    # Convert booleans to lowercase strings for MQTT
+                    if isinstance(value, bool):
+                        payload = str(value).lower()
+                    else:
+                        payload = (
+                            str(value)
+                            if not isinstance(value, (dict, list))
+                            else jsonlib.dumps(value)
+                        )
                     # Publish state with QoS 1 and retain for reliability
                     self.mqtt_client.publish(topic, payload, qos=1, retain=True)
                     published_count += 1
@@ -944,14 +954,22 @@ class MeticulousAddon:
                 last_profile = await asyncio.get_running_loop().run_in_executor(
                     None, lambda: api.get_last_profile()
                 )
+                logger.info(
+                    f"get_last_profile returned: {last_profile}, type: {type(last_profile)}"
+                )
                 if (
                     last_profile
                     and not isinstance(last_profile, APIError)
                     and hasattr(last_profile, "profile")
                 ):
                     profile = last_profile.profile
+                    logger.info(f"Profile: {profile}, type: {type(profile)}")
                     profile_name = getattr(profile, "name", None)
                     profile_id = getattr(last_profile, "id", None)
+                    logger.info(
+                        f"Profile name: {profile_name}, id: {profile_id}, "
+                        f"temperature: {getattr(profile, 'temperature', None)}"
+                    )
 
                     if profile_name and profile_id:
                         # Set this as the active profile on the machine
@@ -972,12 +990,22 @@ class MeticulousAddon:
                         initial_data["profile_author"] = getattr(profile, "author", None)
                         initial_data["target_temperature"] = getattr(profile, "temperature", None)
                         initial_data["target_weight"] = getattr(profile, "final_weight", None)
+                        logger.info(
+                            f"Set profile targets: "
+                            f"temperature={initial_data.get('target_temperature')}, "
+                            f"weight={initial_data.get('target_weight')}"
+                        )
 
                         # Store profile name to publish after discovery is sent
                         self.initial_profile_to_publish = profile_name
                         logger.info(
                             f"Stored initial profile to publish after discovery: {profile_name}"
                         )
+                else:
+                    logger.info(
+                        f"get_last_profile returned None, APIError, or missing "
+                        f"profile: {last_profile}"
+                    )
 
             except Exception as e:
                 logger.debug(f"Could not fetch initial profile: {e}")
