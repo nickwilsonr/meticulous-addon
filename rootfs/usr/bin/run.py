@@ -426,8 +426,6 @@ class MeticulousAddon:
                     self.mqtt_client.publish(topic, payload, qos=1, retain=True)
                     logger.debug(f"Published {key}={payload} to {topic}")
                     published_count += 1
-                if published_count > 0:
-                    logger.info(f"Published {published_count} MQTT state updates")
             except Exception as e:
                 logger.warning(f"MQTT publish failed: {e}")
 
