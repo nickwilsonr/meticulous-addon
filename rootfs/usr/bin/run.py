@@ -641,6 +641,9 @@ class MeticulousAddon:
             for key, m in self._mqtt_sensor_mapping().items():
                 if key == "active_profile":
                     continue
+                # Skip brightness - it's handled as a number control via set_brightness command
+                if key == "brightness":
+                    continue
 
                 component = m["component"]
                 object_id = f"{self.slug}_{key}"
