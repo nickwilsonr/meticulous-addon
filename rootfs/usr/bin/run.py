@@ -691,8 +691,12 @@ class MeticulousAddon:
                     # Binary sensors need device_class or explicit payload mappings
                     if key == "connected":
                         payload["device_class"] = "connectivity"
+                        payload["payload_on"] = "true"
+                        payload["payload_off"] = "false"
                     elif key == "brewing":
                         payload["device_class"] = "running"
+                        payload["payload_on"] = "true"
+                        payload["payload_off"] = "false"
                     else:
                         # For other binary sensors, explicitly set payload values
                         payload["payload_on"] = "true"
