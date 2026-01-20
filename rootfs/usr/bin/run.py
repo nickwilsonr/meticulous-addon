@@ -258,16 +258,16 @@ class MeticulousAddon:
             )
 
             # Log handler setup for debugging
-            logger.info("Socket.IO handlers configured:")
-            logger.info(f"  - onStatus: {self._handle_status_event}")
-            logger.info(f"  - onTemperatureSensors: {self._handle_temperature_event}")
-            logger.info(f"  - onProfileChange: {self._handle_profile_event}")
-            logger.info(f"  - onNotification: {self._handle_notification_event}")
-            logger.info(f"  - onButton: {self._handle_button_event}")
-            logger.info(f"  - onSettingsChange: {self._handle_settings_change_event}")
-            logger.info(f"  - onCommunication: {self._handle_communication_event}")
-            logger.info(f"  - onActuators: {self._handle_actuators_event}")
-            logger.info(f"  - onMachineInfo: {self._handle_machine_info_event}")
+            logger.debug("Socket.IO handlers configured:")
+            logger.debug(f"  - onStatus: {self._handle_status_event}")
+            logger.debug(f"  - onTemperatureSensors: {self._handle_temperature_event}")
+            logger.debug(f"  - onProfileChange: {self._handle_profile_event}")
+            logger.debug(f"  - onNotification: {self._handle_notification_event}")
+            logger.debug(f"  - onButton: {self._handle_button_event}")
+            logger.debug(f"  - onSettingsChange: {self._handle_settings_change_event}")
+            logger.debug(f"  - onCommunication: {self._handle_communication_event}")
+            logger.debug(f"  - onActuators: {self._handle_actuators_event}")
+            logger.debug(f"  - onMachineInfo: {self._handle_machine_info_event}")
 
             # Initialize API
             self.api = Api(base_url=base_url, options=options)  # type: ignore[assignment]
@@ -304,12 +304,12 @@ class MeticulousAddon:
 
             # Connect Socket.IO for real-time updates
             try:
-                logger.info("Connecting to Socket.IO...")
+                logger.debug("Connecting to Socket.IO...")
                 self.api.connect_to_socket()
                 self.socket_connected = True
                 self.api_connected = True
-                logger.info("Socket.IO connected - real-time updates enabled")
-                logger.info(
+                logger.debug("Socket.IO connected - real-time updates enabled")
+                logger.debug(
                     "Event handlers registered: onStatus, onTemperatureSensors, "
                     "onProfileChange, onNotification, onButton, onSettingsChange"
                 )
@@ -340,7 +340,7 @@ class MeticulousAddon:
         data = {"connected": connected}
         await self.publish_to_homeassistant(data)
         state = "connected" if connected else "disconnected"
-        logger.info(f"Connectivity state: {state}")
+        logger.debug(f"Connectivity state: {state}")
         # Publish availability via MQTT
         if self.mqtt_client:
             self.mqtt_client.publish(
@@ -401,16 +401,14 @@ class MeticulousAddon:
         # If MQTT is enabled, publish mapped sensor states
         if self.mqtt_enabled and self.mqtt_client:
             try:
-                published_count = 0
+                published_fields = []
                 for key, value in sensor_data.items():
                     # Skip None values - don't publish them
                     if value is None:
-                        logger.debug(f"Skipping {key}: value is None")
                         continue
 
                     mapping = self._mqtt_sensor_mapping().get(key)
                     if not mapping:
-                        logger.debug(f"Skipping {key}: no mapping found")
                         continue
                     topic = mapping["state_topic"]
                     # Convert booleans to lowercase strings for MQTT
@@ -424,8 +422,9 @@ class MeticulousAddon:
                         )
                     # Publish state with QoS 1 and retain for reliability
                     self.mqtt_client.publish(topic, payload, qos=1, retain=True)
-                    logger.debug(f"Published {key}={payload} to {topic}")
-                    published_count += 1
+                    published_fields.append(key)
+                if published_fields:
+                    logger.info(f"Published initial state: {', '.join(published_fields)}")
             except Exception as e:
                 logger.warning(f"MQTT publish failed: {e}")
 
@@ -740,7 +739,7 @@ class MeticulousAddon:
                     config_topic, jsonlib.dumps(payload), qos=1, retain=True
                 )
                 discovery_count += 1
-                logger.info(f"Sensor {key}: rc={result.rc}")
+                logger.debug(f"Sensor {key}: rc={result.rc}")
                 await asyncio.sleep(0.01)  # Small yield to event loop
         except Exception as e:
             logger.error(f"Error in sensor discovery: {e}", exc_info=True)
@@ -780,7 +779,7 @@ class MeticulousAddon:
                         config_topic, jsonlib.dumps(payload), qos=1, retain=True
                     )
                     discovery_count += 1
-                    logger.info(f"Brightness command: rc={result.rc}")
+                    logger.debug(f"Brightness command: rc={result.rc}")
                     await asyncio.sleep(0.01)
                     continue
 
@@ -830,7 +829,7 @@ class MeticulousAddon:
                     config_topic, jsonlib.dumps(payload), qos=1, retain=True
                 )
                 discovery_count += 1
-                logger.info(f"Command {key}: rc={result.rc}")
+                logger.debug(f"Command {key}: rc={result.rc}")
                 await asyncio.sleep(0.01)
         except Exception as e:
             logger.error(f"Error in command discovery: {e}", exc_info=True)
@@ -855,13 +854,13 @@ class MeticulousAddon:
                     config_topic, jsonlib.dumps(payload), qos=1, retain=True
                 )
                 discovery_count += 1
-                logger.info(f"Active profile: rc={result.rc}")
+                logger.debug(f"Active profile: rc={result.rc}")
                 await asyncio.sleep(0.01)
         except Exception as e:
             logger.error(f"Error in profile discovery: {e}", exc_info=True)
             return
 
-        logger.info(f"Discovery complete: published {discovery_count} configs with QoS 1")
+        logger.info(f"Discovery complete: published {discovery_count} configs")
 
         # Publish active profile state after discovery so HA recognizes the entity
         if self.initial_profile_to_publish and self.mqtt_client:
@@ -869,7 +868,7 @@ class MeticulousAddon:
             self.mqtt_client.publish(
                 state_topic, self.initial_profile_to_publish, qos=1, retain=True
             )
-            logger.info(
+            logger.debug(
                 f"Published initial active_profile state: {self.initial_profile_to_publish}"
             )
             self.initial_profile_to_publish = None
@@ -968,10 +967,10 @@ class MeticulousAddon:
                     and hasattr(last_profile, "profile")
                 ):
                     profile = last_profile.profile
-                    logger.info(f"Profile: {profile}, type: {type(profile)}")
+                    logger.debug(f"Profile: {profile}, type: {type(profile)}")
                     profile_name = getattr(profile, "name", None)
                     profile_id = getattr(profile, "id", None)
-                    logger.info(
+                    logger.debug(
                         f"Profile name: {profile_name}, id: {profile_id}, "
                         f"temperature: {getattr(profile, 'temperature', None)}"
                     )
@@ -987,7 +986,7 @@ class MeticulousAddon:
                             await asyncio.get_running_loop().run_in_executor(
                                 None, lambda: api.send_profile_hover(payload)
                             )
-                            logger.info(f"Set active profile to: {profile_name}")
+                            logger.debug(f"Set active profile to: {profile_name}")
                         except Exception as e:
                             logger.debug(f"Could not set active profile: {e}")
 
@@ -995,7 +994,7 @@ class MeticulousAddon:
                         initial_data["profile_author"] = getattr(profile, "author", None)
                         initial_data["target_temperature"] = getattr(profile, "temperature", None)
                         initial_data["target_weight"] = getattr(profile, "final_weight", None)
-                        logger.info(
+                        logger.debug(
                             f"Set profile targets: "
                             f"temperature={initial_data.get('target_temperature')}, "
                             f"weight={initial_data.get('target_weight')}"
@@ -1003,7 +1002,7 @@ class MeticulousAddon:
 
                         # Store profile name to publish after discovery is sent
                         self.initial_profile_to_publish = profile_name
-                        logger.info(
+                        logger.debug(
                             f"Stored initial profile to publish after discovery: {profile_name}"
                         )
                 else:
@@ -1355,13 +1354,13 @@ class MeticulousAddon:
             # Extract state
             state = status.get("state", "unknown")
             if state != self.current_state:
-                logger.info(f"Machine state changed: {self.current_state} -> {state}")
+                logger.debug(f"Machine state changed: {self.current_state} -> {state}")
                 self.current_state = state
 
             # Detect profile changes
             loaded_profile = status.get("loaded_profile")
             if loaded_profile and loaded_profile != self.current_profile:
-                logger.info(f"Profile changed: {self.current_profile} -> {loaded_profile}")
+                logger.debug(f"Profile changed: {self.current_profile} -> {loaded_profile}")
                 self.current_profile = loaded_profile
                 # Trigger profile info update
                 if self.loop:
@@ -1759,9 +1758,9 @@ class MeticulousAddon:
                     )
                     try:
                         # Wait for connection to fully handshake with broker
-                        logger.info("Waiting 1s for MQTT handshake before discovery publish...")
+                        logger.debug("Waiting 1s for MQTT handshake before discovery publish...")
                         await asyncio.sleep(1.0)
-                        logger.info("Handshake complete, calling discovery publish...")
+                        logger.debug("Handshake complete, calling discovery publish...")
                         await self._mqtt_publish_discovery()
                         self.mqtt_discovery_pending = False
                     except Exception as e:
