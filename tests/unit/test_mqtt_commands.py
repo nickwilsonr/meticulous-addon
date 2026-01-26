@@ -86,18 +86,24 @@ class TestMQTTCommands(unittest.TestCase):
 
     def test_load_profile_success(self):
         """Test successful load_profile command."""
-        profile_id = "test-profile-123"
-        # load_profile now uses send_profile_hover (returns None, not a result object)
-        handle_command_load_profile(self.addon, profile_id)
+        # Setup: profile name comes from HA, we need available_profiles to map name->id
+        self.addon.available_profiles = {
+            "profile-id-123": "Espresso",
+            "profile-id-456": "Americano",
+        }
+        # send_profile_hover always returns None (success indication is absence of error)
+        self.addon.api.send_profile_hover.return_value = None
+        handle_command_load_profile(self.addon, "Espresso")
         # Verify send_profile_hover was called with correct payload
         self.addon.api.send_profile_hover.assert_called_once()
         call_args = self.addon.api.send_profile_hover.call_args[0][0]
-        self.assertEqual(call_args["id"], profile_id)
+        self.assertEqual(call_args["id"], "profile-id-123")
         self.assertEqual(call_args["from"], "app")
         self.assertEqual(call_args["type"], "focus")
 
     def test_load_profile_empty_id(self):
-        """Test load_profile with empty profile ID."""
+        """Test load_profile with empty profile name."""
+        self.addon.available_profiles = {}
         handle_command_load_profile(self.addon, "")
         self.addon.api.send_profile_hover.assert_not_called()
 
@@ -215,17 +221,5 @@ class TestCommandValidation(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
-"""Unit tests for MQTT command handlers."""
-
-import json
-import os
-import sys
-import unittest
-from unittest.mock import Mock
-
-from meticulous.api_types import ActionType, APIError
-
-# Add project directory to path
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "..", "rootfs", "usr", "bin"))
 
 # ...rest of the file unchanged...

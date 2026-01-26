@@ -2,6 +2,13 @@
 
 All notable user-facing changes to this add-on are documented here.
 
+## [0.26.3] - 2026-01-26
+
+### 🔧 Fixes
+- **Actions now working** - Fixed espresso machine actions (start brew, stop, preheat, tare, etc.) that were not executing
+- **Profile selection fixed** - Profile hover selection now works correctly
+- **Updated to latest pyMeticulous 0.3.1** - Now using the latest version of the pyMeticulous library with bug fixes
+
 ## [0.26.2] - 2026-01-20
 
 ### ✨ Improvements
