@@ -2,6 +2,11 @@
 
 All notable user-facing changes to this add-on are documented here.
 
+## [0.26.7] - 2026-01-26
+
+### 🔧 Fixes
+- **Fixed brightness state publishing** - Publish brightness updates without retain flag to update UI while avoiding feedback loops from stale retained messages
+
 ## [0.26.6] - 2026-01-26
 
 ### 🔧 Fixes
