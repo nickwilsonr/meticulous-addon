@@ -86,19 +86,26 @@ class TestMQTTCommands(unittest.TestCase):
 
     def test_load_profile_success(self):
         """Test successful load_profile command."""
-        profile_id = "test-profile-123"
-        # load_profile now uses send_profile_hover (returns None, not a result object)
-        handle_command_load_profile(self.addon, profile_id)
+        # Setup: profile name comes from HA, we need available_profiles to map to ID
+        self.addon.available_profiles = {
+            "profile-id-123": "Espresso",
+            "profile-id-456": "Americano",
+        }
+        # load_profile uses send_profile_hover to select without starting a shot
+        self.addon.api.send_profile_hover.return_value = None
+        handle_command_load_profile(self.addon, "Espresso")
         # Verify send_profile_hover was called with correct payload
         self.addon.api.send_profile_hover.assert_called_once()
         call_args = self.addon.api.send_profile_hover.call_args[0][0]
-        self.assertEqual(call_args["id"], profile_id)
+        self.assertEqual(call_args["id"], "profile-id-123")
         self.assertEqual(call_args["from"], "app")
         self.assertEqual(call_args["type"], "focus")
 
     def test_load_profile_empty_id(self):
-        """Test load_profile with empty profile ID."""
+        """Test load_profile with empty profile name."""
+        self.addon.available_profiles = {}
         handle_command_load_profile(self.addon, "")
+        # Empty payload should cause early return
         self.addon.api.send_profile_hover.assert_not_called()
 
     def test_set_brightness_integer_payload(self):

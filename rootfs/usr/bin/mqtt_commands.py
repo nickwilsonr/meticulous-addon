@@ -58,6 +58,8 @@ def handle_command_start_brew(addon: "MeticulousAddon"):
         logger.debug(f"execute_action returned: {result}, type: {type(result)}")
         if isinstance(result, APIError):
             logger.error(f"start_brew failed: {result.error}")
+        elif result.status != "ok":
+            logger.error(f"start_brew failed: action returned status '{result.status}'")
         else:
             logger.info("start_brew: Success")
     except Exception as e:
@@ -72,6 +74,8 @@ def handle_command_stop_brew(addon: "MeticulousAddon"):
         result = addon.api.execute_action(ActionType.STOP)
         if isinstance(result, APIError):
             logger.error(f"stop_brew failed: {result.error}")
+        elif result.status != "ok":
+            logger.error(f"stop_brew failed: action returned status '{result.status}'")
         else:
             logger.info("stop_brew: Success")
     except Exception as e:
@@ -86,6 +90,8 @@ def handle_command_continue_brew(addon: "MeticulousAddon"):
         result = addon.api.execute_action(ActionType.CONTINUE)
         if isinstance(result, APIError):
             logger.error(f"continue_brew failed: {result.error}")
+        elif result.status != "ok":
+            logger.error(f"continue_brew failed: action returned status '{result.status}'")
         else:
             logger.info("continue_brew: Success")
     except Exception as e:
@@ -100,6 +106,8 @@ def handle_command_preheat(addon: "MeticulousAddon"):
         result = addon.api.execute_action(ActionType.PREHEAT)
         if isinstance(result, APIError):
             logger.error(f"preheat failed: {result.error}")
+        elif result.status != "ok":
+            logger.error(f"preheat failed: action returned status '{result.status}'")
         else:
             logger.info("preheat: Success")
     except Exception as e:
@@ -111,9 +119,13 @@ def handle_command_tare_scale(addon: "MeticulousAddon"):
         logger.error("Cannot tare scale: API not connected")
         return
     try:
+        logger.debug("Executing TARE action...")
         result = addon.api.execute_action(ActionType.TARE)
+        logger.debug(f"execute_action returned: {result}, type: {type(result)}")
         if isinstance(result, APIError):
             logger.error(f"tare_scale failed: {result.error}")
+        elif result.status != "ok":
+            logger.error(f"tare_scale failed: action returned status '{result.status}'")
         else:
             logger.info("tare_scale: Success")
     except Exception as e:
@@ -158,8 +170,8 @@ def handle_command_set_brightness(addon: "MeticulousAddon", payload: str):
         data = json.loads(payload) if payload.startswith("{") else {"brightness": int(payload)}
         brightness_value = int(data.get("brightness", 50))
 
-        # Normalize brightness from 0-100 (HA range) to 0-1 (pyMeticulous 0.3.1 range)
-        brightness_normalized = brightness_value / 100.0
+        # Normalize brightness from 0-100 (HA range) to 0-1 (pyMeticulous range)
+        brightness_normalized = float(brightness_value) / 100.0
 
         # Use the pyMeticulous API wrapper
         # Note: BrightnessRequest expects brightness as float (0-1 range)

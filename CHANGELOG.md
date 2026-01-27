@@ -2,6 +2,12 @@
 
 All notable user-facing changes to this add-on are documented here.
 
+## [0.26.4] - 2026-01-26
+
+### 🔧 Fixes
+- **Action response status checking** - Fixed action handlers to properly check ActionResponse.status, catching when machine rejects actions (e.g., can't tare while extracting)
+- **Brightness normalization** - Fixed brightness value conversion to use proper float type for API validation
+
 ## [0.26.3] - 2026-01-26
 
 ### 🔧 Fixes
