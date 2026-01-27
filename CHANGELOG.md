@@ -2,6 +2,12 @@
 
 All notable user-facing changes to this add-on are documented here.
 
+## [0.26.8] - 2026-01-26
+
+### 🔧 Fixes
+- **Fixed brightness 1-behind lag** - Skip brightness in Socket.IO settings handler to prevent retained messages from overwriting immediate command publish
+- **Initialize brightness on startup** - Set brightness to 50% on addon startup to sync machine and Home Assistant slider
+
 ## [0.26.7] - 2026-01-26
 
 ### 🔧 Fixes
