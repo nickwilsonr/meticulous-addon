@@ -32,10 +32,6 @@
       "name": "Voltage Delta",
       "description": "Minimum change in volts required to publish voltage readings. (Default: 1.0)"
     },
-    "brightness_delta": {
-      "name": "Brightness Delta",
-      "description": "Minimum change in percentage (0-100) required to publish brightness updates. Prevents oscillation from sensor noise. (Default: 2)"
-    },
     "stale_data_refresh_interval": {
       "name": "Stale Data Refresh Interval",
       "description": "Force a full refresh of all sensor data after this time with no updates (in hours, 1-168). Ensures non-chatty sensors (settings, statistics, profile info) are periodically refreshed so Home Assistant doesn't forget them. (Default: 24)"

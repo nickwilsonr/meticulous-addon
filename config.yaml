@@ -1,5 +1,5 @@
 ---
-version: 0.27.0
+version: 0.27.1
 slug: meticulous_espresso
 name: Meticulous Espresso
 description: Integration for Meticulous Espresso machines with local API support
@@ -39,7 +39,6 @@ options:
   weight_delta: 0.1
   time_delta: 0.1
   voltage_delta: 1.0
-  brightness_delta: 2
   stale_data_refresh_interval: 24
   debug: false
   mqtt_enabled: true
@@ -56,7 +55,6 @@ schema:
   weight_delta: float(0,10)?
   time_delta: float(0,10)?
   voltage_delta: float(0,50)?
-  brightness_delta: int(0,100)?
   stale_data_refresh_interval: int(1,168)?
   debug: bool?
   mqtt_enabled: bool?

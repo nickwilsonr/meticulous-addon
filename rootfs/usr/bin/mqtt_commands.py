@@ -197,6 +197,12 @@ def handle_command_set_brightness(addon: "MeticulousAddon", payload: str):
             logger.error(f"set_brightness failed: {result.error}")
         else:
             logger.info(f"set_brightness: Success ({brightness_value}%)")
+            # Publish brightness to MQTT immediately so HA UI updates
+            # This shows what we requested, even if device takes time to confirm
+            if addon.mqtt_client:
+                state_topic = f"{addon.state_prefix}/brightness/state"
+                addon.mqtt_client.publish(state_topic, str(brightness_value), qos=1, retain=True)
+                logger.debug(f"Published brightness state: {brightness_value}%")
     except Exception as e:
         logger.error(f"set_brightness error: {e}", exc_info=True)
 

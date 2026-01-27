@@ -81,7 +81,6 @@ class MeticulousAddon:
         flow_delta = float(self.config.get("flow_delta", 0.1))
         weight_delta = float(self.config.get("weight_delta", 0.1))
         time_delta = float(self.config.get("time_delta", 0.1))
-        brightness_delta = float(self.config.get("brightness_delta", 2))
         self.sensor_deltas: Dict[str, float] = {
             "boiler_temperature": temperature_delta,
             "brew_head_temperature": temperature_delta,
@@ -97,7 +96,6 @@ class MeticulousAddon:
             "target_pressure": pressure_delta,
             "target_flow": flow_delta,
             "voltage": float(self.config.get("voltage_delta", 1.0)),
-            "brightness": brightness_delta,
         }
         # String/Boolean/Timestamp sensors - exact match filtering
         self.exact_match_sensors = {
@@ -116,9 +114,6 @@ class MeticulousAddon:
         }
         # Track last values for each field (for delta filtering)
         self.last_field_values: Dict[str, Any] = {}
-
-        # Track whether brightness has been initialized (only do it once at true startup)
-        self.brightness_initialized = False
 
         self.last_stale_refresh_time = time.time()
         self.running = False
@@ -1082,32 +1077,10 @@ class MeticulousAddon:
             f"brewing={initial_data['brewing']}, "
             f"socket_connected={self.socket_connected}"
         )
-
-        # Initialize brightness to 50% (sync both slider and machine) - only once at true startup
-        if not self.brightness_initialized and self.api:
-            try:
-                from meticulous.api_types import BrightnessRequest
-
-                api = self.api  # Capture reference to satisfy type checker
-                brightness_request = BrightnessRequest(brightness=0.5)
-                result = await asyncio.get_running_loop().run_in_executor(
-                    None, lambda: api.set_brightness(brightness_request)
-                )
-                if not isinstance(result, APIError):
-                    # Store as 0-100 for state publishing
-                    initial_data["brightness"] = 50
-                    # Pass through delta filter to set "last value" so first real
-                    # update isn't blocked
-                    filtered_brightness = self._filter_throttled_fields({"brightness": 50})
-                    if "brightness" in filtered_brightness:
-                        # Update last_field_values so subsequent deltas are properly tracked
-                        self.last_field_values["brightness"] = 50
-                    self.brightness_initialized = True
-                    logger.info("Initialized brightness to 50% on startup")
-                else:
-                    logger.warning(f"Failed to initialize brightness: {result.error}")
-            except Exception as e:
-                logger.debug(f"Could not initialize brightness: {e}")
+        # Brightness is now managed entirely through MQTT commands
+        # When user changes brightness via HA UI, mqtt_commands.handle_command_set_brightness()
+        # sends it to the API and publishes the state back to MQTT
+        # No initialization needed here
 
         # Publish all available initial state
         await self.publish_to_homeassistant(initial_data)
@@ -1512,8 +1485,6 @@ class MeticulousAddon:
                     "external_temp_2": temps.get("t_ext_2"),
                 }
                 # Extract brightness from amplifier levels (a_0, a_1, a_2, a_3)
-                # Device returns brightness as 0-1, convert to 0-100 for HA
-                brightness_raw = temps.get("a_0")
             else:
                 temp_data = {
                     "boiler_temperature": temps.t_bar_up,
@@ -1521,37 +1492,9 @@ class MeticulousAddon:
                     "external_temp_1": temps.t_ext_1,
                     "external_temp_2": temps.t_ext_2,
                 }
-                brightness_raw = temps.a_0
 
-            # Convert brightness from 0-1 to 0-100 for Home Assistant
-            brightness_level = (
-                int(round(brightness_raw * 100)) if brightness_raw is not None else None
-            )
-            if brightness_level is not None:
-                temp_data["brightness"] = brightness_level
-
-            # Filter to only non-throttled fields (including brightness delta filtering)
+            # Filter to only non-throttled fields
             filtered_data = self._filter_throttled_fields(temp_data)
-            if filtered_data and self.mqtt_client:
-                try:
-                    # Publish brightness separately to ensure it gets to MQTT state topic
-                    if "brightness" in filtered_data:
-                        state_topic = f"{self.state_prefix}/brightness/state"
-                        brightness_value = filtered_data["brightness"]
-                        self.mqtt_client.publish(
-                            state_topic, str(brightness_value), qos=1, retain=True
-                        )
-                        logger.debug(
-                            f"Published brightness state from "
-                            f"onTemperatureSensors: {brightness_value}%"
-                        )
-                        # Remove from filtered_data so it's not published again
-                        # by publish_to_homeassistant
-                        filtered_data.pop("brightness")
-                except Exception as e:
-                    logger.debug(f"Failed to publish brightness state: {e}")
-
-            # Publish remaining temperature data
             if filtered_data and self.loop:
                 asyncio.run_coroutine_threadsafe(
                     self.publish_to_homeassistant(filtered_data), self.loop
