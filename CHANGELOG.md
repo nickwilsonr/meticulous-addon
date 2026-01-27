@@ -2,249 +2,253 @@
 
 All notable user-facing changes to this add-on are documented here.
 
+## [0.27.1] - 2026-01-26
+
+### Fixes
+- **Brightness control cleaned up** - Removed complex Socket.IO state reading that wasn't working. Brightness now uses simple MQTT command and state model - when you adjust the slider, the add-on sends the command to the machine and publishes the result
+- **Startup brightness initialization restored** - Sets brightness to 50% when the add-on starts to align the Home Assistant slider with the machine's actual state
+
 ## [0.27.0] - 2026-01-26
 
-### 🔧 Fixes
-- **Fixed brightness 1-step lag (queue workaround)** - Device has command processing queue that causes 1-step lag. Implemented workaround: send brightness commands twice to API so device queue returns correct value on first Socket.IO event (no more lag)
-- **Fixed brightness resets to 50%** - Added `brightness_initialized` flag to prevent re-initialization on MQTT reconnects. Brightness now only initializes once at true startup.
-- **Improved delta filtering** - Pass initial brightness through delta filter to properly set baseline, preventing first update from being blocked.
+### Fixes
+- **Fixed brightness 1-step lag with double-send workaround** - Device has a command processing queue that causes brightness changes to appear one step behind. Workaround: send brightness commands twice to the API so the device queue returns the correct value on the first event
+- **Fixed brightness resetting to 50% unexpectedly** - Brightness initialization now only happens once when the add-on starts, not every time MQTT reconnects
+- **Improved delta filtering** - First brightness update now passes through delta filter correctly to set the baseline, preventing the first update from being blocked
 
 ## [0.26.13] - 2026-01-26
 
-### 🔧 Fixes
-- **Fixed brightness oscillation and denormalization** - Device returns brightness as 0-1 (normalized), now converting to 0-100 for Home Assistant. Also applies delta filtering (publish only when change >= 1) to prevent oscillation from rounding between 49-50.
+### Fixes
+- **Fixed brightness oscillation issue** - Device returns brightness as 0-1 (decimal), now converting to 0-100 for Home Assistant. Also filters small changes (less than 1%) to stop oscillation from rounding between 49-50
 
 ## [0.26.12] - 2026-01-26
 
-### 🔧 Fixes
-- **Fixed brightness 1-step lag (actual fix)** - Discovered device does NOT emit brightness in `onSettingsChange` events. Brightness is included in `onTemperatureSensors` event (amplifier fields a_0/a_1/a_2/a_3). Updated handler to extract and publish brightness from temperature sensors in real-time. v0.26.11 approach was correct theory but used wrong event source.
+### Fixes
+- **Fixed brightness 1-step lag (found the right data)** - Device doesn't send brightness in settings change events. It's actually included in temperature sensor events (the a_0 field). Updated to read brightness from the right place
 
 ## [0.26.11] - 2026-01-26
 
-### 🔧 Fixes
-- **Fixed brightness 1-step lag (root cause)** - Device has command processing queue. Publishing from command handler publishes before device processes command, so HA sees previous value. Now brightness only published from Socket.IO `onSettingsChange` event when device confirms actual change
+### Fixes
+- Device command queue causes brightness to appear one step behind. Publishing immediately from the command handler doesn't work because the device hasn't processed it yet. Now brightness only publishes from Socket.IO when device confirms the change
 
 ## [0.26.10] - 2026-01-26
 
-### 🔧 Fixes
-- **Fixed brightness 1-step lag (attempt 2)** - Publish brightness with `retain=True` to overwrite stale retained values on the broker. `retain=False` doesn't clear old retained messages, so the broker keeps serving the old value to new subscribers
+### Fixes
+- Brightness changes now publish with `retain=True` to overwrite stale retained messages on the broker, so Home Assistant always gets the current value
 
 ## [0.26.9] - 2026-01-26
 
-### 📝 Improvements
-- **Reduced debug logging chattiness** - Removed excessive Socket.IO event logging that was unreadable (hundreds of packets per second). Only meaningful state changes logged now (machine state, profile changes, errors)
+### Improvements
+- Reduced excessive Socket.IO event logging. Was logging hundreds of packets per second making logs unreadable. Now only meaningful changes logged
 
 ## [0.26.8] - 2026-01-26
 
-### 🔧 Fixes
-- **Fixed brightness 1-behind lag** - Skip brightness in Socket.IO settings handler to prevent retained messages from overwriting immediate command publish
-- **Initialize brightness on startup** - Set brightness to 50% on addon startup to sync machine and Home Assistant slider
+### Fixes
+- Fixed brightness feedback loop where retained messages were overwriting immediate command publishing
+- Brightness initializes to 50% on startup to sync the Home Assistant slider with the machine
 
 ## [0.26.7] - 2026-01-26
 
-### 🔧 Fixes
-- **Fixed brightness state publishing** - Publish brightness updates without retain flag to update UI while avoiding feedback loops from stale retained messages
+### Fixes
+- Fixed brightness state publishing to avoid feedback loops with stale retained messages
 
 ## [0.26.6] - 2026-01-26
 
-### 🔧 Fixes
-- **Fixed brightness command lag** - Removed immediate state publish that was creating MQTT feedback loop causing commands to execute one step behind
+### Fixes
+- Fixed brightness command lag caused by immediate state publishing creating MQTT feedback loops
 
 ## [0.26.5] - 2026-01-26
 
-### 🔧 Fixes
-- **Pinned pymeticulous to 0.3.1** - Fixed version mismatch where container could install 0.3.0 with validation bugs
+### Fixes
+- Pinned pymeticulous to version 0.3.1 to avoid installation issues with version 0.3.0 that had validation bugs
 
 ## [0.26.4] - 2026-01-26
 
-### 🔧 Fixes
-- **Action response status checking** - Fixed action handlers to properly check ActionResponse.status, catching when machine rejects actions (e.g., can't tare while extracting)
-- **Brightness normalization** - Fixed brightness value conversion to use proper float type for API validation
+### Fixes
+- Action handlers now properly check response status to catch when the machine rejects actions (like trying to tare while extracting)
+- Fixed brightness value conversion to use the correct float type for API validation
 
 ## [0.26.3] - 2026-01-26
 
-### 🔧 Fixes
-- **Actions now working** - Fixed espresso machine actions (start brew, stop, preheat, tare, etc.) that were not executing
-- **Profile selection fixed** - Profile hover selection now works correctly
-- **Updated to latest pyMeticulous 0.3.1** - Now using the latest version of the pyMeticulous library with bug fixes
+### Fixes
+- Machine actions now work properly (start brew, stop, preheat, tare, etc.)
+- Profile selection now responds correctly to your choices
+- Updated to pyMeticulous 0.3.1 with bug fixes
 
 ## [0.26.2] - 2026-01-20
 
-### ✨ Improvements
-- **Automatic entity cleanup on startup** - Add-on now automatically clears stale Home Assistant entities on each upgrade, ensuring a clean slate without manual intervention
-- **Cleaner logs** - Reduced verbosity in startup logs by moving diagnostic details to debug level
+### Improvements
+- Add-on now clears stale Home Assistant entities on startup, so you don't have old orphaned entities
+- Reduced log verbosity by moving diagnostic details to debug level
 
 ## [0.26.1] - 2026-01-20
 
-### 🔧 Improvements
+### Improvements
 - Improved logging to help diagnose sensor issues
-- Fixed connection timing to ensure proper initialization
+- Fixed connection timing during startup
 
 ## [0.26.0] - 2026-01-20
 
-### ✨ Fixes
-- **All sensors now display properly** - Fixed issues where Brewing, Connected, and other binary sensors showed as "unknown"
-- **Fixed brightness control** - No longer appears as duplicate sensor
-- **Fixed sounds toggle** - Now appears correctly in Home Assistant
-- **Fixed active profile selector** - Shows the currently selected profile
-- **Improved startup** - All sensor values load immediately when the add-on starts
-- Updated to pyMeticulous 0.3.1 for better API reliability
+### Fixes
+- All sensors now display properly instead of showing "unknown"
+- Brightness control no longer appears as a duplicate sensor
+- Sounds toggle now appears correctly in Home Assistant
+- Profile selector shows your currently selected profile
+- All sensor values load immediately when the add-on starts
+- Updated to pyMeticulous 0.3.1 for better machine communication
 
 ## [0.5.25] - 2026-01-20
 
-### 🔍 Improvements
+### Improvements
 - Added better diagnostics to help troubleshoot sensor visibility issues
 
 ## [0.5.24] - 2026-01-20
 
-### ⚙️ Improvements
+### Improvements
 - Updated core machine communication for better reliability
 
 ## [0.5.23] - 2026-01-17
 
-### 🐛 Bug Fixes
-- Fixed profile selector not showing your current choice
-- All machine values now load immediately when the add-on starts
-- Fixed sounds and brightness controls appearing correctly in Home Assistant
+### Fixes
+- Profile selector now shows your current choice
+- All machine values load immediately when the add-on starts
+- Sounds and brightness controls now appear correctly in Home Assistant
 
 ## [0.5.22] - 2026-01-17
 
-### 🐛 Bug Fixes
-- Fixed sensors showing "unknown" when they should show real values
+### Fixes
+- Sensors no longer show "unknown" when they should show real values
 - All machine information loads properly at startup
 
 ## [0.5.21] - 2026-01-17
 
-### ⚡ Performance
-- Reduced unnecessary sensor messages - your network stays quieter while sensors still update responsively
+### Performance
+- Reduced unnecessary sensor messages so your network stays quieter while sensors still update responsively
 - New settings let you control how often sensors refresh
 
 ## [0.5.20] - 2026-01-15
 
-### 🔧 Improvements
+### Improvements
 - Fixed how your machine appears as a device in Home Assistant
 
 ## [0.5.19] - 2026-01-15
 
-### 🔧 Improvements
+### Improvements
 - Fixed how Home Assistant recognizes the add-on
 
 ## [0.5.18] - 2026-01-15
 
-### 🔧 Improvements
+### Improvements
 - Improved connection handshake with Home Assistant
 
 ## [0.5.17] - 2026-01-15
 
-### ⚡ Performance
+### Performance
 - Sensors now appear in Home Assistant much faster after startup
 
 ## [0.5.16] - 2026-01-15
 
-### 🐛 Bug Fixes
+### Fixes
 - Fixed device name consistency in Home Assistant
 
 ## [0.5.15] - 2026-01-15
 
-### 🔧 Improvements
+### Improvements
 - Better diagnostic information for troubleshooting connection issues
 
 ## [0.5.14] - 2026-01-15
 
-### 🔧 Improvements
+### Improvements
 - Improved sensor discovery reliability
 
 ## [0.5.13] - 2026-01-15
 
-### 🔧 Improvements
+### Improvements
 - Better error handling for sensor discovery
 
 ## [0.5.12] - 2026-01-15
 
-### 🐛 Bug Fixes
+### Fixes
 - Fixed sensors not appearing in Home Assistant after starting the add-on
 
 ## [0.5.11] - 2026-01-15
 
-### 🔧 Improvements
+### Improvements
 - Better diagnostics for connection troubleshooting
 
 ## [0.5.10] - 2026-01-15
 
-### 🐛 Bug Fixes
+### Fixes
 - Fixed sensors not appearing after startup
 
 ## [0.5.9] - 2026-01-15
 
-### 🔧 Improvements
+### Improvements
 - Added troubleshooting information for sensor discovery
 
 ## [0.5.8] - 2026-01-15
 
-### 🐛 Bug Fixes
+### Fixes
 - Fixed sensors disappearing after add-on restart - they now reappear properly in Home Assistant
 
 ## [0.5.7] - 2026-01-15
 
-### 🐛 Bug Fixes
+### Fixes
 - Fixed sensors not reaching Home Assistant
 
 ## [0.5.6] - 2026-01-15
 
-### 🐛 Bug Fixes
+### Fixes
 - Improved message delivery to Home Assistant
 
 ## [0.5.5] - 2026-01-15
 
-### 🐛 Bug Fixes
+### Fixes
 - Improved connection reliability
 
 ## [0.5.4] - 2026-01-14
 
-### ✨ New Features
-- **New Commands**: Added `continue_brew` and `reboot_machine` commands
-- **Firmware Update Sensor**: See when firmware updates are available for your machine
-- **Improved Brightness Control**: Brightness is now a slider for easier adjustment
-- **Configurable Refresh Rate**: Adjust how often sensors update (1-60 minutes, default 5)
+### New Features
+- New commands: `continue_brew` and `reboot_machine`
+- Firmware update sensor so you know when updates are available for your machine
+- Brightness is now a slider for easier adjustment
+- Configurable refresh rate for sensor updates (1-60 minutes, default 5)
 
-### 🐛 Bug Fixes
+### Fixes
 - Fixed profile loading reliability
 - Improved command execution
 
 ## [0.5.1-0.5.3] - 2026-01-09
 
-### 🐛 Bug Fixes
+### Fixes
 - Fixed profile selector dropdown on startup
-- Improved reliability of profile selection
+- Improved profile selection reliability
 
 ## [0.5.0] - 2026-01-09
 
-### 🎮 Full Machine Control in Home Assistant
+### New Features
 Your Meticulous machine is now fully controllable from Home Assistant!
-
-### ✨ New Features
-- **Brew Controls** - Start, stop, and continue brewing from Home Assistant
-- **Machine Operations** - Preheat your machine and tare the scale with buttons
-- **Settings** - Adjust brightness with a slider and toggle sounds on/off
-- **Profile Selector** - Switch between profiles with a dropdown menu
-- **Real-time Updates** - All sensors update instantly when you interact with your machine
+- Start, stop, and continue brewing
+- Preheat your machine and tare the scale with buttons
+- Adjust brightness with a slider and toggle sounds on/off
+- Switch between profiles with a dropdown menu
+- All sensors update instantly when you interact with your machine
 
 ## [0.4.0-0.4.3] - 2026-01-09
 
-### 🎉 Real-time Updates
+### Features
 All sensors now update instantly when you interact with your machine - no more waiting for polling updates!
 
-### 🐛 Bug Fixes
+### Fixes
 - Fixed crashes during live updates
 - Improved profile loading with fractional timestamps
 
 ## [0.3.0-0.3.6] - 2026-01-09
 
-### ✨ Features
-- **Full Home Assistant Integration** - Your Meticulous machine appears in Home Assistant with sensors and controls
-- **Real-time Updates** - See machine status, temperature, pressure, and timing instantly
-- **Automation Ready** - Create automations based on your machine's state
-- All sensors now appear immediately in Home Assistant on startup
+### Features
+- Full Home Assistant integration - your Meticulous machine appears with sensors and controls
+- Real-time updates for machine status, temperature, pressure, and timing
+- Create automations based on your machine's state
+- All sensors appear immediately in Home Assistant on startup
 
 ## [0.1.0] - 2026-01-07
 
