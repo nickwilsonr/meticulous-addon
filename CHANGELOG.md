@@ -2,6 +2,11 @@
 
 All notable user-facing changes to this add-on are documented here.
 
+## [0.26.12] - 2026-01-26
+
+### 🔧 Fixes
+- **Fixed brightness 1-step lag (actual fix)** - Discovered device does NOT emit brightness in `onSettingsChange` events. Brightness is included in `onTemperatureSensors` event (amplifier fields a_0/a_1/a_2/a_3). Updated handler to extract and publish brightness from temperature sensors in real-time. v0.26.11 approach was correct theory but used wrong event source.
+
 ## [0.26.11] - 2026-01-26
 
 ### 🔧 Fixes

@@ -1498,6 +1498,9 @@ class MeticulousAddon:
                     "external_temp_1": temps.get("t_ext_1"),
                     "external_temp_2": temps.get("t_ext_2"),
                 }
+                # Extract brightness from amplifier levels (a_0, a_1, a_2, a_3)
+                # Use a_0 as primary brightness level
+                brightness_level = temps.get("a_0")
             else:
                 temp_data = {
                     "boiler_temperature": temps.t_bar_up,
@@ -1505,6 +1508,18 @@ class MeticulousAddon:
                     "external_temp_1": temps.t_ext_1,
                     "external_temp_2": temps.t_ext_2,
                 }
+                brightness_level = temps.a_0
+
+            # Publish brightness immediately (raw device value)
+            if brightness_level is not None and self.mqtt_client:
+                try:
+                    state_topic = f"{self.state_prefix}/brightness/state"
+                    self.mqtt_client.publish(state_topic, str(brightness_level), qos=1, retain=True)
+                    logger.debug(
+                        f"Published brightness state from onTemperatureSensors: {brightness_level}"
+                    )
+                except Exception as e:
+                    logger.debug(f"Failed to publish brightness state: {e}")
 
             # Filter to only non-throttled fields and publish
             filtered_data = self._filter_throttled_fields(temp_data)
@@ -1562,19 +1577,10 @@ class MeticulousAddon:
         # Tracked but not logged per event
 
     def _handle_settings_change_event(self, settings: Dict):
-        """Handle settings change events from Socket.IO (e.g., brightness, auto-dim)."""
-        # Publish brightness when device state changes (including auto-dim)
-        if "brightness" in settings and self.mqtt_client:
-            try:
-                brightness_value = settings["brightness"]
-                state_topic = f"{self.state_prefix}/brightness/state"
-                # Publish the actual device state with retain to persist it
-                self.mqtt_client.publish(state_topic, str(brightness_value), qos=1, retain=True)
-                logger.debug(f"Published brightness state from device: {brightness_value}")
-            except Exception as e:
-                logger.debug(f"Failed to publish brightness state: {e}")
-
-        # Publish other settings changes
+        """Handle settings change events from Socket.IO (e.g., auto-dim, sounds_enabled)."""
+        # NOTE: Brightness is NOT included in onSettingsChange events.
+        # Brightness is published from onTemperatureSensors (a_0, a_1, a_2, a_3 fields).
+        # Only publish non-brightness settings changes
         filtered_settings = {k: v for k, v in settings.items() if k != "brightness"}
         if filtered_settings and self.loop:
             asyncio.run_coroutine_threadsafe(
