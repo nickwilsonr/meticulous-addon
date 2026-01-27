@@ -1080,6 +1080,24 @@ class MeticulousAddon:
             f"socket_connected={self.socket_connected}"
         )
 
+        # Initialize brightness to 50% (sync both slider and machine)
+        if self.api:
+            try:
+                from meticulous.api_types import BrightnessRequest
+
+                api = self.api  # Capture reference to satisfy type checker
+                brightness_request = BrightnessRequest(brightness=0.5)
+                result = await asyncio.get_running_loop().run_in_executor(
+                    None, lambda: api.set_brightness(brightness_request)
+                )
+                if not isinstance(result, APIError):
+                    initial_data["brightness"] = 50  # Store as 0-100 for state publishing
+                    logger.info("Initialized brightness to 50% on startup")
+                else:
+                    logger.warning(f"Failed to initialize brightness: {result.error}")
+            except Exception as e:
+                logger.debug(f"Could not initialize brightness: {e}")
+
         # Publish all available initial state
         await self.publish_to_homeassistant(initial_data)
         logger.debug(f"Published initial state for {len(initial_data)} sensors")
