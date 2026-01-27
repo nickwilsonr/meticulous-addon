@@ -189,16 +189,16 @@ def handle_command_set_brightness(addon: "MeticulousAddon", payload: str):
             logger.error(f"set_brightness failed: {result.error}")
         else:
             logger.info(f"set_brightness: Success ({brightness_value}%)")
-            # Publish state update without retain to avoid feedback loops
-            # Use QoS 0 for fire-and-forget to prevent stale retained messages
+            # Publish state update without retain, but with QoS 1 to guarantee delivery
+            # QoS 1 ensures the message reaches the MQTT broker before Socket.IO stale values arrive
             if addon.mqtt_client:
                 try:
                     state_topic = f"{addon.state_prefix}/brightness/state"
                     addon.mqtt_client.publish(
-                        state_topic, str(brightness_value), qos=0, retain=False
+                        state_topic, str(brightness_value), qos=1, retain=False
                     )
                 except Exception as e:
-                    logger.debug(f"Failed to publish brightness state: {e}")
+                    logger.info(f"Failed to publish brightness state: {e}")
     except Exception as e:
         logger.error(f"set_brightness error: {e}", exc_info=True)
 

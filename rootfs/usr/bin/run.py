@@ -395,8 +395,7 @@ class MeticulousAddon:
 
         # TODO: Implement Home Assistant MQTT discovery and state publishing
         # This will use the Home Assistant API or MQTT to create and update sensors
-        # For now, log at debug and ensure non-blocking behavior
-        logger.debug(f"Publishing sensor data: {sensor_data}")
+        # For now, ensure non-blocking behavior
 
         # If MQTT is enabled, publish mapped sensor states
         if self.mqtt_enabled and self.mqtt_client:
@@ -423,8 +422,7 @@ class MeticulousAddon:
                     # Publish state with QoS 1 and retain for reliability
                     self.mqtt_client.publish(topic, payload, qos=1, retain=True)
                     published_fields.append(key)
-                if published_fields:
-                    logger.debug(f"Published initial state: {', '.join(published_fields)}")
+                # Only log if fields were published (but don't spam the log)
             except Exception as e:
                 logger.warning(f"MQTT publish failed: {e}")
 
@@ -1418,17 +1416,16 @@ class MeticulousAddon:
             # Extract state
             state = status.get("state", "unknown")
             if state != self.current_state:
-                logger.debug(f"Machine state changed: {self.current_state} -> {state}")
+                logger.info(f"Machine state changed: {self.current_state} -> {state}")
                 self.current_state = state
 
             # Detect profile changes
             loaded_profile = status.get("loaded_profile")
             if loaded_profile and loaded_profile != self.current_profile:
-                logger.debug(f"Profile changed: {self.current_profile} -> {loaded_profile}")
+                logger.info(f"Profile changed: {self.current_profile} -> {loaded_profile}")
                 self.current_profile = loaded_profile
                 # Trigger profile info update
                 if self.loop:
-                    logger.debug("Scheduling profile info update after profile change")
                     asyncio.run_coroutine_threadsafe(self.update_profile_info(), self.loop)
 
             # Extract sensor data
@@ -1501,8 +1498,6 @@ class MeticulousAddon:
                     "external_temp_1": temps.get("t_ext_1"),
                     "external_temp_2": temps.get("t_ext_2"),
                 }
-                t_bar_up = temps.get("t_bar_up", 0)
-                t_bar_down = temps.get("t_bar_down", 0)
             else:
                 temp_data = {
                     "boiler_temperature": temps.t_bar_up,
@@ -1510,8 +1505,6 @@ class MeticulousAddon:
                     "external_temp_1": temps.t_ext_1,
                     "external_temp_2": temps.t_ext_2,
                 }
-                t_bar_up = temps.t_bar_up
-                t_bar_down = temps.t_bar_down
 
             # Filter to only non-throttled fields and publish
             filtered_data = self._filter_throttled_fields(temp_data)
@@ -1520,22 +1513,17 @@ class MeticulousAddon:
                     self.publish_to_homeassistant(filtered_data), self.loop
                 )
 
-            logger.debug(f"Temps: Boiler={t_bar_up:.1f}°C, " f"Brew Head={t_bar_down:.1f}°C")
-
         except Exception as e:
             logger.error(f"Error handling temperature event: {e}", exc_info=True)
 
     def _handle_profile_event(self, profile_event: Any):
         """Handle profile change events from Socket.IO."""
         try:
-            logger.debug(f"Profile changed: {profile_event}")
             # Update current profile
             # Fetch full profile details if needed
             if self.loop:
-                logger.debug("Scheduling profile info update")
                 asyncio.run_coroutine_threadsafe(self.update_profile_info(), self.loop)
                 # Also refresh available profiles in case list changed
-                logger.debug("Scheduling profile list refresh")
                 asyncio.run_coroutine_threadsafe(self.fetch_available_profiles(), self.loop)
             else:
                 logger.warning("No event loop available for profile update")
@@ -1570,13 +1558,11 @@ class MeticulousAddon:
 
     def _handle_button_event(self, button: Any):
         """Handle button events from Socket.IO (e.g., tare button)."""
-        logger.debug(f"Button event received: {button}")
         # Button events could trigger updates or actions
-        # For now, just log them to understand what events come through
+        # Tracked but not logged per event
 
     def _handle_settings_change_event(self, settings: Dict):
         """Handle settings change events from Socket.IO (e.g., brightness)."""
-        logger.debug(f"Settings change event received: {settings}")
         # Filter out brightness - it's handled specially by the command handler
         # which publishes immediately without retain to avoid feedback loops
         filtered_settings = {k: v for k, v in settings.items() if k != "brightness"}
@@ -1587,17 +1573,14 @@ class MeticulousAddon:
 
     def _handle_communication_event(self, comm: Any):
         """Handle communication events from Socket.IO."""
-        logger.debug(f"Communication event received: {comm}")
-        # Log these for debugging but they may not be user-relevant
+        # Communication events tracked but not logged
 
     def _handle_actuators_event(self, actuators: Any):
         """Handle actuator events from Socket.IO."""
-        logger.debug(f"Actuators event received: {actuators}")
-        # This might include pump, valve states, etc.
+        # Actuator state changes tracked
 
     def _handle_machine_info_event(self, info: Any):
         """Handle machine info events from Socket.IO."""
-        logger.debug(f"Machine info event received: {info}")
         # Device/firmware info updates
 
     # =========================================================================
