@@ -2,6 +2,11 @@
 
 All notable user-facing changes to this add-on are documented here.
 
+## [0.26.10] - 2026-01-26
+
+### 🔧 Fixes
+- **Fixed brightness 1-step lag (root cause)** - Exclude brightness from polling loop MQTT publish to prevent stale retained messages from overwriting immediate command publish. Command handler publishes with `retain=False`, polling loop publishes with `retain=True`, causing retained message to "win" on broker
+
 ## [0.26.9] - 2026-01-26
 
 ### 📝 Improvements

@@ -406,6 +406,11 @@ class MeticulousAddon:
                     if value is None:
                         continue
 
+                    # Skip brightness - it's published immediately by the command handler
+                    # without retain to avoid stale retained values on the broker
+                    if key == "brightness":
+                        continue
+
                     mapping = self._mqtt_sensor_mapping().get(key)
                     if not mapping:
                         continue
