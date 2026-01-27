@@ -2,6 +2,6 @@
 aiohttp==3.9.1
 
 # Meticulous Python API wrapper with Socket.IO support
-pymeticulous>=0.3.0
+pymeticulous==0.3.1
 
 paho-mqtt==1.6.1
