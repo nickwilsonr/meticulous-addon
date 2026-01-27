@@ -2,6 +2,11 @@
 
 All notable user-facing changes to this add-on are documented here.
 
+## [0.26.9] - 2026-01-26
+
+### 📝 Improvements
+- **Reduced debug logging chattiness** - Removed excessive Socket.IO event logging that was unreadable (hundreds of packets per second). Only meaningful state changes logged now (machine state, profile changes, errors)
+
 ## [0.26.8] - 2026-01-26
 
 ### 🔧 Fixes
