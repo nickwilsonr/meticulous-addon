@@ -2,6 +2,11 @@
 
 All notable user-facing changes to this add-on are documented here.
 
+## [0.28.1] - 2026-01-28
+
+### Fixes
+- **Auto-cleanup on version upgrade** — Old MQTT entities are automatically removed when upgrading from earlier versions. No manual deletion of devices needed.
+
 ## [0.28.0] - 2026-01-27
 
 ### Breaking Changes

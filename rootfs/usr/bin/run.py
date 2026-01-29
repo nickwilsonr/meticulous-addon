@@ -66,6 +66,7 @@ class MeticulousAddon:
         """
         self.config = self._load_config()
         self._setup_logging()
+        self.addon_version = self.config.get("version", "unknown")
         raw_machine_ip = str(self.config.get("machine_ip", "")).strip()
         if raw_machine_ip.lower().startswith("example") or " " in raw_machine_ip:
             raw_machine_ip = ""
@@ -206,6 +207,27 @@ class MeticulousAddon:
         except json.JSONDecodeError:
             logger.error("Invalid JSON in configuration file!")
             return {}
+
+    def _load_addon_state(self) -> Dict[str, Any]:
+        """Load addon state from persistent storage."""
+        try:
+            with open("/data/addon_state.json", "r") as f:
+                return json.load(f)
+        except FileNotFoundError:
+            # First run - no state file yet
+            return {}
+        except json.JSONDecodeError:
+            logger.warning("Invalid JSON in addon state file - resetting state")
+            return {}
+
+    def _save_addon_state(self, state: Dict[str, Any]) -> None:
+        """Save addon state to persistent storage."""
+        try:
+            with open("/data/addon_state.json", "w") as f:
+                json.dump(state, f, indent=2)
+            logger.debug(f"Saved addon state: {state}")
+        except Exception as e:
+            logger.error(f"Failed to save addon state: {e}")
 
     def _setup_logging(self):
         """Configure logging based on user settings.
@@ -690,6 +712,83 @@ class MeticulousAddon:
             logger.debug("Discovery configs cleared")
         except Exception as e:
             logger.error(f"Error clearing old discovery: {e}", exc_info=True)
+
+    async def _mqtt_cleanup_old_entity_versions(self) -> None:
+        """Clean up MQTT entities from older addon versions.
+
+        When addon version changes, this removes MQTT entities that were renamed
+        or no longer exist. Currently handles v0.28.0 migration (brew_* -> shot_*).
+        """
+        if not (self.mqtt_enabled and self.mqtt_client):
+            logger.debug("Skipping entity version cleanup: mqtt not ready")
+            return
+
+        # Load previous version
+        addon_state = self._load_addon_state()
+        previous_version = addon_state.get("version")
+
+        # Compare with current version
+        current_version = self.addon_version
+        if previous_version == current_version:
+            logger.debug(f"Version unchanged ({current_version}) - no cleanup needed")
+            return
+
+        logger.info(f"Version changed: {previous_version} -> {current_version}")
+        logger.info("Cleaning up MQTT entities from previous versions...")
+
+        try:
+            # Migration: v0.27.x to v0.28.0 - brew_* commands renamed to shot_*
+            if previous_version and self._version_less_than(previous_version, "0.28.0"):
+                logger.info("Detected pre-0.28.0 version - cleaning up old brew_* MQTT entities")
+                old_brew_topics = [
+                    f"{self.state_prefix}/brew/state",  # Old state
+                    f"{self.command_prefix}/start_brew",
+                    f"{self.command_prefix}/stop_brew",
+                    f"{self.command_prefix}/continue_brew",
+                ]
+
+                # Publish empty payloads to old topics (retain=True) to remove from HA
+                for topic in old_brew_topics:
+                    self.mqtt_client.publish(topic, "", qos=1, retain=True)
+                    logger.debug(f"Cleared old entity: {topic}")
+                    await asyncio.sleep(0.01)
+
+                # Also clear old discovery configs for the brew commands
+                old_brew_commands = ["start_brew", "stop_brew", "continue_brew"]
+                for cmd in old_brew_commands:
+                    entity_id = f"{self.slug}_{cmd}"
+                    config_topic = f"{self.discovery_prefix}/button/{entity_id}/config"
+                    self.mqtt_client.publish(config_topic, "", qos=1, retain=True)
+                    logger.debug(f"Cleared old discovery: {config_topic}")
+                    await asyncio.sleep(0.01)
+
+                logger.info("Old brew_* entities cleaned up successfully")
+
+            # Update stored version for next startup
+            addon_state["version"] = current_version
+            addon_state["last_migration"] = datetime.now().isoformat()
+            self._save_addon_state(addon_state)
+
+            logger.info(f"Version migration completed: updated to {current_version}")
+
+        except Exception as e:
+            logger.error(f"Error cleaning up old entity versions: {e}", exc_info=True)
+
+    def _version_less_than(self, version1: str, version2: str) -> bool:
+        """Compare two semantic versions. Returns True if version1 < version2."""
+        try:
+
+            def parse_version(v):
+                # Parse "0.28.0" to (0, 28, 0)
+                parts = v.split(".")
+                return tuple(int(p) for p in parts[:3])
+
+            v1 = parse_version(version1)
+            v2 = parse_version(version2)
+            return v1 < v2
+        except (ValueError, AttributeError):
+            logger.warning(f"Could not compare versions: {version1} vs {version2}")
+            return False
 
     async def _mqtt_publish_discovery(self) -> None:
         """Publish Home Assistant MQTT discovery configs using QoS 1."""
@@ -1790,6 +1889,9 @@ class MeticulousAddon:
         # Initial delay to let Socket.IO establish
         await asyncio.sleep(10)
 
+        # Version migration: clean up old MQTT entities on first run after MQTT connects
+        version_migration_done = False
+
         while self.running:
             try:
                 # Retry MQTT connection if not connected with exponential backoff
@@ -1827,6 +1929,14 @@ class MeticulousAddon:
                             "Handshake complete, clearing old discovery and publishing new..."
                         )
                         await self._mqtt_clear_old_discovery()
+
+                        # Run version migration cleanup once after MQTT connects
+                        if not version_migration_done:
+                            logger.debug("Running version migration cleanup...")
+                            await self._mqtt_cleanup_old_entity_versions()
+                            version_migration_done = True
+                            logger.debug("Version migration cleanup completed")
+
                         await self._mqtt_publish_discovery()
                         self.mqtt_discovery_pending = False
                     except Exception as e:
