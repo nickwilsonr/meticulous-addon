@@ -5,5 +5,4 @@ pull_request_rules:
       - base=master
       - status-success=Run flake8
     actions:
-      approve:
-        message: "✅ All checks passed - approved by Mergify"
+      approve: {}
