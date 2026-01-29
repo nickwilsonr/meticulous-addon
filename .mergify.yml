@@ -1,0 +1,21 @@
+pull_request_rules:
+  - name: Automatically approve and merge PRs when checks pass
+    conditions:
+      - "#approved-reviews-by >= 1"
+      - "check-success=Run flake8"
+      - "base=master"
+    actions:
+      approve:
+        message: "✅ All checks passed - auto-approved by Mergify"
+      merge:
+        method: squash
+        commit_message: "{{ title }}"
+
+  - name: Auto-approve from author if all checks pass
+    conditions:
+      - "author=nickwilsonr"
+      - "check-success=Run flake8"
+      - "base=master"
+    actions:
+      approve:
+        message: "✅ All checks passed - auto-approved by Mergify"
