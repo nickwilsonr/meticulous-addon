@@ -2,8 +2,8 @@ pull_request_rules:
   - name: Auto-approve PR from author when checks pass
     conditions:
       - author=nickwilsonr
-      - check-success=Run flake8
       - base=master
+      - status-success=Run flake8
     actions:
       approve:
         message: "✅ All checks passed - approved by Mergify"
