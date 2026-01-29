@@ -1,9 +1,7 @@
 pull_request_rules:
-  - name: Auto-approve PR from author when checks pass
+  - name: Auto-approve PR when flake8 passes
     conditions:
-      - author=nickwilsonr
-      - base=master
-      - check-success=Run flake8
+      - "check-success=Run flake8"
     actions:
       review:
         type: APPROVE
