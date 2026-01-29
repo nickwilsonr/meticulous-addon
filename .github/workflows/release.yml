@@ -14,7 +14,68 @@ on:
         default: ''
 
 jobs:
+  prepare:
+    name: Prepare version and tag
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+      tag: ${{ steps.version.outputs.tag }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Full history to check for existing tags
+
+      - name: Extract version from config.yaml or tag
+        id: version
+        run: |
+          if [[ "${{ github.ref }}" == refs/tags/* ]]; then
+            # Tag-based trigger: extract from tag name
+            VERSION="${{ github.ref_name }}"
+            VERSION="${VERSION#v}"
+            echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+            echo "tag=v$VERSION" >> "$GITHUB_OUTPUT"
+            echo "Source: Git tag"
+          elif [[ "${{ github.event_name }}" == "workflow_dispatch" && "${{ github.event.inputs.version }}" != "" ]]; then
+            # Manual trigger with version input
+            VERSION="${{ github.event.inputs.version }}"
+            echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+            echo "tag=v$VERSION" >> "$GITHUB_OUTPUT"
+            echo "Source: Manual input"
+          else
+            # Master branch push: extract from config.yaml
+            VERSION=$(grep "^version:" config.yaml | head -n1 | sed 's/version:[[:space:]]*//;s/"//g')
+            echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+            echo "tag=v$VERSION" >> "$GITHUB_OUTPUT"
+            echo "Source: config.yaml"
+          fi
+
+      - name: Check if tag exists
+        id: check_tag
+        run: |
+          TAG="${{ steps.version.outputs.tag }}"
+          if git rev-parse "$TAG" >/dev/null 2>&1; then
+            echo "exists=true" >> "$GITHUB_OUTPUT"
+            echo "Tag $TAG already exists"
+          else
+            echo "exists=false" >> "$GITHUB_OUTPUT"
+            echo "Tag $TAG does not exist, will create"
+          fi
+
+      - name: Create and push tag
+        if: steps.check_tag.outputs.exists == 'false' && github.event_name != 'workflow_dispatch'
+        run: |
+          TAG="${{ steps.version.outputs.tag }}"
+          VERSION="${{ steps.version.outputs.version }}"
+          echo "Creating tag: $TAG"
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git tag -a "$TAG" -m "Release version $VERSION"
+          git push origin "$TAG"
+          echo "Tag $TAG created and pushed"
+
   build:
+    needs: prepare
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -35,15 +96,6 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-
-      - name: Extract version
-        id: meta
-        run: |
-          VERSION="${{ github.event.inputs.version }}"
-          if [ -z "$VERSION" ]; then
-            VERSION="${GITHUB_REF_NAME#v}"
-          fi
-          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
 
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v3
@@ -69,7 +121,7 @@ jobs:
             BUILD_FROM=${{ matrix.base }}
           tags: |
             ghcr.io/nickwilsonr/${{ matrix.arch }}-meticulous-addon:latest
-            ghcr.io/nickwilsonr/${{ matrix.arch }}-meticulous-addon:${{ steps.meta.outputs.version }}
+            ghcr.io/nickwilsonr/${{ matrix.arch }}-meticulous-addon:${{ needs.prepare.outputs.version }}
           cache-from: type=registry,ref=ghcr.io/nickwilsonr/${{ matrix.arch }}-meticulous-addon:buildcache
           cache-to: type=registry,ref=ghcr.io/nickwilsonr/${{ matrix.arch }}-meticulous-addon:buildcache,mode=max
 

@@ -1,8 +1,6 @@
 name: Lint
 
 on:
-  push:
-    branches: ["**"]
   pull_request:
 
 jobs:
@@ -27,4 +25,4 @@ jobs:
       - name: Lint with flake8
         run: |
           flake8 --version
-          flake8
+          flake8 rootfs/ tests/
