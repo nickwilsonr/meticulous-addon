@@ -14,7 +14,14 @@
    pip install -r requirements.txt
    ```
 
-2. **Configure:**
+2. **Set up pre-commit hooks (required):**
+   ```bash
+   pip install pre-commit
+   pre-commit install
+   ```
+   This ensures code quality checks run automatically before each commit. Required to push to this repository.
+
+3. **Configure:**
    Create `/data/options.json`:
    ```json
    {
@@ -24,7 +31,7 @@
    }
    ```
 
-3. **Run:**
+4. **Run:**
    ```bash
    python rootfs/usr/bin/run.py
    ```
@@ -41,8 +48,32 @@ meticulous-addon/
 ├── config.json                        # Add-on config schema
 ├── Dockerfile                         # Container build
 ├── requirements.txt                   # Python dependencies
+├── .pre-commit-config.yaml            # Code quality hooks
 └── docs/                              # Documentation
 ```
+
+---
+
+## Code Quality & Pre-Commit Hooks
+
+This project uses **pre-commit** to enforce code quality standards automatically:
+
+**What gets checked:**
+- **Black**: Code formatting (Python)
+- **Flake8**: Linting and style compliance
+- **isort**: Import statement organization
+- **Trailing whitespace**: Removes extra spaces
+- **End-of-file fixer**: Ensures proper file endings
+- **YAML validation**: Checks workflow and config syntax
+- **JSON validation**: Checks data file syntax
+
+**What to do:**
+1. After cloning, run: `pre-commit install`
+2. Hooks will run automatically before each commit
+3. If checks fail, fix the issues and try committing again
+4. To run checks manually: `pre-commit run --all-files`
+
+**Note:** Commits that fail pre-commit checks cannot be pushed to master due to branch protection rules.
 
 ---
 

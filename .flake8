@@ -11,5 +11,6 @@ exclude =
     *.egg-info
 per-file-ignores =
     # Tests import modules dynamically
-    tests/*.py:E402
+    tests/*.py:E402,F401,F811
+    tests/**/*.py:E402,F401,F811
     __init__.py:F401
