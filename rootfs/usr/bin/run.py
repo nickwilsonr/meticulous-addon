@@ -471,107 +471,128 @@ class MeticulousAddon:
                 "component": "binary_sensor",
                 "state_topic": f"{base}/connected/state",
                 "name": "Meticulous Connected",
+                "description": "Whether the machine is connected",
             },
             "state": {
                 "component": "sensor",
                 "state_topic": f"{base}/state/state",
                 "name": "Meticulous State",
+                "description": "Current machine state",
             },
             "brewing": {
                 "component": "binary_sensor",
                 "state_topic": f"{base}/brewing/state",
                 "name": "Meticulous Brewing",
+                "description": "Whether a shot is currently brewing",
             },
             "boiler_temperature": {
                 "component": "sensor",
                 "state_topic": f"{base}/boiler_temperature/state",
                 "name": "Boiler Temperature",
+                "description": "Current boiler water temperature",
             },
             "brew_head_temperature": {
                 "component": "sensor",
                 "state_topic": f"{base}/brew_head_temperature/state",
                 "name": "Brew Head Temperature",
+                "description": "Current brew head temperature",
             },
             "external_temp_1": {
                 "component": "sensor",
                 "state_topic": f"{base}/external_temp_1/state",
                 "name": "External Temperature 1",
+                "description": "External temperature sensor 1",
             },
             "external_temp_2": {
                 "component": "sensor",
                 "state_topic": f"{base}/external_temp_2/state",
                 "name": "External Temperature 2",
+                "description": "External temperature sensor 2",
             },
             "pressure": {
                 "component": "sensor",
                 "state_topic": f"{base}/pressure/state",
                 "name": "Pressure",
+                "description": "Pressure in portafilter during extraction",
             },
             "flow_rate": {
                 "component": "sensor",
                 "state_topic": f"{base}/flow_rate/state",
                 "name": "Flow Rate",
+                "description": "Current flow rate during extraction",
             },
             "shot_timer": {
                 "component": "sensor",
                 "state_topic": f"{base}/shot_timer/state",
                 "name": "Shot Timer",
+                "description": "Time elapsed in current shot",
             },
             "shot_weight": {
                 "component": "sensor",
                 "state_topic": f"{base}/shot_weight/state",
                 "name": "Shot Weight",
+                "description": "Current weight of espresso in cup",
             },
             "total_shots": {
                 "component": "sensor",
                 "state_topic": f"{base}/total_shots/state",
                 "name": "Total Shots",
+                "description": "Total number of shots pulled",
             },
             "last_shot_name": {
                 "component": "sensor",
                 "state_topic": f"{base}/last_shot_name/state",
                 "name": "Last Shot Name",
+                "description": "Name of the last shot",
             },
             "last_shot_rating": {
                 "component": "sensor",
                 "state_topic": f"{base}/last_shot_rating/state",
                 "name": "Last Shot Rating",
+                "description": "User rating of last shot",
             },
             "last_shot_time": {
                 "component": "sensor",
                 "state_topic": f"{base}/last_shot_time/state",
                 "name": "Last Shot Time",
+                "description": "Timestamp of last shot",
                 "device_class": "timestamp",
             },
             "profile_author": {
                 "component": "sensor",
                 "state_topic": f"{base}/profile_author/state",
                 "name": "Profile Author",
+                "description": "Author of active espresso profile",
             },
             "target_temperature": {
                 "component": "sensor",
                 "state_topic": f"{base}/target_temperature/state",
                 "name": "Target Temperature",
+                "description": "Target temperature from profile",
             },
             "target_weight": {
                 "component": "sensor",
                 "state_topic": f"{base}/target_weight/state",
                 "name": "Target Weight",
+                "description": "Target espresso weight from profile",
             },
             "firmware_version": {
                 "component": "sensor",
                 "state_topic": f"{base}/firmware_version/state",
                 "name": "Firmware Version",
+                "description": "Machine firmware version",
             },
             "software_version": {
                 "component": "sensor",
                 "state_topic": f"{base}/software_version/state",
                 "name": "Software Version",
+                "description": "Software version of add-on",
             },
             "voltage": {
                 "component": "sensor",
                 "state_topic": f"{base}/voltage/state",
                 "name": "Voltage",
+                "description": "Current power supply voltage",
             },
             "sounds_enabled": {
                 "component": "switch",
@@ -580,12 +601,14 @@ class MeticulousAddon:
                 "name": "Sounds Enabled",
                 "payload_on": "true",
                 "payload_off": "false",
+                "description": "Toggle machine notification sounds",
             },
             # Brightness: read-only sensor, control is via set_brightness command
             "brightness": {
                 "component": "sensor",
                 "state_topic": f"{base}/brightness/state",
                 "name": "Brightness",
+                "description": "Display brightness level",
             },
         }
         # fmt: on
@@ -889,6 +912,10 @@ class MeticulousAddon:
                     # These are generic string sensors, no specific device_class needed
                     pass
 
+                # Add entity description from mapping
+                if "description" in m:
+                    payload["entity_description"] = m["description"]
+
                 # Log first sensor payload as example
                 if not sample_payload_logged:
                     logger.debug(
@@ -929,6 +956,8 @@ class MeticulousAddon:
                         "max": cmd.get("max", 100),
                         "unit_of_measurement": "%",
                     }
+                    if "description" in cmd:
+                        payload["entity_description"] = cmd["description"]
                     # Log first command payload as example
                     if not sample_cmd_logged:
                         logger.debug(
@@ -961,6 +990,8 @@ class MeticulousAddon:
                         "min": cmd.get("min", 0),
                         "max": cmd.get("max", 100),
                     }
+                    if "description" in cmd:
+                        payload["entity_description"] = cmd["description"]
                 elif cmd_type == "switch":
                     component = "switch"
                     config_topic = f"{self.discovery_prefix}/{component}/{object_id}/config"
@@ -974,6 +1005,8 @@ class MeticulousAddon:
                         "payload_on": "true",
                         "payload_off": "false",
                     }
+                    if "description" in cmd:
+                        payload["entity_description"] = cmd["description"]
                 else:  # button
                     component = "button"
                     config_topic = f"{self.discovery_prefix}/{component}/{object_id}/config"
@@ -986,6 +1019,8 @@ class MeticulousAddon:
                         "icon": cmd["icon"],
                         "payload_press": "1",
                     }
+                    if "description" in cmd:
+                        payload["entity_description"] = cmd["description"]
 
                 result = self.mqtt_client.publish(
                     config_topic, jsonlib.dumps(payload), qos=1, retain=True
