@@ -28,17 +28,21 @@ jobs:
 
       - name: Extract version from config.yaml or tag
         id: version
+        env:
+          GITHUB_REF: ${{ github.ref }}
+          GITHUB_EVENT_NAME: ${{ github.event_name }}
+          GITHUB_REF_NAME: ${{ github.ref_name }}
+          VERSION_INPUT: ${{ github.event.inputs.version }}
         run: |
-          if [[ "${{ github.ref }}" == refs/tags/* ]]; then
+          if [[ "$GITHUB_REF" == refs/tags/* ]]; then
             # Tag-based trigger: extract from tag name
-            VERSION="${{ github.ref_name }}"
-            VERSION="${VERSION#v}"
+            VERSION="${GITHUB_REF_NAME#v}"
             echo "version=$VERSION" >> "$GITHUB_OUTPUT"
             echo "tag=v$VERSION" >> "$GITHUB_OUTPUT"
             echo "Source: Git tag"
-          elif [[ "${{ github.event_name }}" == "workflow_dispatch" && "${{ github.event.inputs.version }}" != "" ]]; then
+          elif [[ "$GITHUB_EVENT_NAME" == "workflow_dispatch" && "$VERSION_INPUT" != "" ]]; then
             # Manual trigger with version input
-            VERSION="${{ github.event.inputs.version }}"
+            VERSION="$VERSION_INPUT"
             echo "version=$VERSION" >> "$GITHUB_OUTPUT"
             echo "tag=v$VERSION" >> "$GITHUB_OUTPUT"
             echo "Source: Manual input"
@@ -52,8 +56,9 @@ jobs:
 
       - name: Check if tag exists
         id: check_tag
+        env:
+          TAG: ${{ steps.version.outputs.tag }}
         run: |
-          TAG="${{ steps.version.outputs.tag }}"
           if git rev-parse "$TAG" >/dev/null 2>&1; then
             echo "exists=true" >> "$GITHUB_OUTPUT"
             echo "Tag $TAG already exists"
@@ -64,9 +69,10 @@ jobs:
 
       - name: Create and push tag
         if: steps.check_tag.outputs.exists == 'false' && github.event_name != 'workflow_dispatch'
+        env:
+          TAG: ${{ steps.version.outputs.tag }}
+          VERSION: ${{ steps.version.outputs.version }}
         run: |
-          TAG="${{ steps.version.outputs.tag }}"
-          VERSION="${{ steps.version.outputs.version }}"
           echo "Creating tag: $TAG"
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
