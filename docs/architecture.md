@@ -112,7 +112,24 @@ Focus on home automation use cases rather than exposing the full API. Provide ac
 
 ### Sensors (24 total)
 
-**Machine Status** (3 sensors)
+**Sensor Categories & Update Strategy:**
+
+Sensors are categorized by update frequency and data type to determine optimal publishing strategy:
+
+- **High-Frequency Floating Point** (require delta-based throttling): Temperature, pressure, flow rate, weight, timers
+  - Updates during brewing are very frequent (~100Hz from Socket.IO)
+  - Delta thresholds prevent MQTT message flooding
+  - Recommended: 0.1-1.0°C, 0.2 bar, 0.1 ml/s, 0.1g, 1.0s thresholds
+
+- **Low-Frequency State Changes** (exact match detection): State, profile, brewing flag, connectivity, settings
+  - Update infrequently and should publish on any change
+  - No delta filtering needed
+
+- **Medium-Frequency** (moderate delta): Voltage (1.0V threshold)
+
+- **Rarely-Changing Targets**: Target temperature, weight, pressure (publish on any change)
+
+**Sensor List:**
 - `sensor.meticulous_connected`: Connection status (binary)
 - `sensor.meticulous_state`: Current state (idle, brewing, steaming, heating, preheating, error)
 - `sensor.meticulous_brewing`: Extraction active flag (binary)
