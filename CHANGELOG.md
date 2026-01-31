@@ -2,6 +2,11 @@
 
 All notable user-facing changes to this add-on are documented here.
 
+## [0.29.2] - 2026-01-31
+
+### Fixes
+- Clean up stale `select_profile` entity from Home Assistant that was removed in v0.29.1
+
 ## [0.29.1] - 2026-01-31
 
 ### Fixes

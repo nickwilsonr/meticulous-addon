@@ -742,6 +742,9 @@ class MeticulousAddon:
                 for key in self._mqtt_command_mapping().keys():
                     entity_ids.add(f"{self.slug}_{key}")
 
+                # Add deprecated entity IDs that should be cleaned up
+                entity_ids.add(f"{self.slug}_select_profile")  # Removed in v0.29.1
+
                 # Publish empty payload (retain=True) to clear each config
                 for entity_id in entity_ids:
                     config_topic = f"{self.discovery_prefix}/{component}/{entity_id}/config"
