@@ -2,6 +2,16 @@
 
 All notable user-facing changes to this add-on are documented here.
 
+## [0.29.0] - 2026-01-31
+
+### New Features
+- **`run_profile` command** — Load and preheat a profile in one action (complements `select_profile` which just highlights without loading)
+
+### Improvements
+- **Entity descriptions** — Added descriptions to all sensors and commands for better documentation and future integration enhancements
+- **Sensor icons** — Updated icons throughout Home Assistant for better visual representation of sensor data (flow rate, weight, shot information, profiles, and more)
+- **Profile command semantics** — Renamed `load_profile` to `select_profile` for clarity: select highlights the profile on the machine (you must press the button to load), while the new `run_profile` command actually loads and preheats it
+
 ## [0.28.3] - 2026-01-31
 
 ### Fixes

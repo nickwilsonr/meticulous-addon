@@ -629,8 +629,8 @@ class MeticulousAddon:
         return {
             "start_shot": {
                 "name": "Start Shot",
-                "description": "Start a shot (load & execute profile)",
-                "icon": "mdi:play",
+                "description": "Begin brew execution (after profile is loaded and preheated)",
+                "icon": "mdi:play-circle",
                 "command_suffix": "start_shot",
             },
             "stop_shot": {
@@ -650,6 +650,19 @@ class MeticulousAddon:
                 "description": "Abort the current profile and retract plunger",
                 "icon": "mdi:cancel",
                 "command_suffix": "abort_shot",
+            },
+            "select_profile": {
+                "name": "Select Profile",
+                "description": "Highlight a profile on the machine (press button to load)",
+                "icon": "mdi:checkbox-marked-circle",
+                "command_suffix": "select_profile",
+                "type": "select",
+            },
+            "run_profile": {
+                "name": "Run Profile",
+                "description": "Load and preheat the currently selected profile",
+                "icon": "mdi:play",
+                "command_suffix": "run_profile",
             },
             "preheat": {
                 "name": "Preheat",
@@ -913,15 +926,27 @@ class MeticulousAddon:
                     payload["unit_of_measurement"] = "V"
                 elif key == "shot_timer":
                     payload["unit_of_measurement"] = "s"
+                    payload["icon"] = "mdi:timer"
                 elif key in ("shot_weight", "target_weight"):
                     payload["unit_of_measurement"] = "g"
+                    payload["icon"] = "mdi:scale-bathroom"
                 elif key == "flow_rate":
                     payload["unit_of_measurement"] = "ml/s"
+                    payload["icon"] = "mdi:waves"
                 elif key == "last_shot_time":
                     payload["device_class"] = "timestamp"
-                elif key in ("firmware_version", "software_version", "state"):
-                    # These are generic string sensors, no specific device_class needed
-                    pass
+                elif key == "last_shot_name":
+                    payload["icon"] = "mdi:pencil"
+                elif key == "last_shot_rating":
+                    payload["icon"] = "mdi:star"
+                elif key == "total_shots":
+                    payload["icon"] = "mdi:counter"
+                elif key == "profile_author":
+                    payload["icon"] = "mdi:account"
+                elif key == "state":
+                    payload["icon"] = "mdi:list-status"
+                elif key in ("firmware_version", "software_version"):
+                    payload["icon"] = "mdi:content-save"
 
                 # Add entity description from mapping
                 if "description" in m:
@@ -1051,7 +1076,7 @@ class MeticulousAddon:
                 payload: Dict[str, Any] = {
                     "name": "Active Profile",
                     "unique_id": object_id,
-                    "command_topic": f"{self.command_prefix}/load_profile",
+                    "command_topic": f"{self.command_prefix}/select_profile",
                     "state_topic": f"{self.state_prefix}/active_profile/state",
                     "availability_topic": self.availability_topic,
                     "device": device,
