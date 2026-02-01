@@ -19,8 +19,8 @@ The Meticulous Home Assistant add-on provides real-time integration with Meticul
 ✅ **Health Metrics**: Diagnostic data publishing (uptime, reconnect count, error tracking)
 ✅ **Graceful Degradation**: Availability topic with online/offline states
 
-### Sensors (24 total)
-- **Machine Status**: connected, state, brewing
+### Sensors (25 total)
+- **Machine Status**: connected, state, brewing, preheat_remaining
 - **Temperature**: boiler, brew head, target, external_temp_1, external_temp_2
 - **Brewing**: pressure, flow rate, shot timer, shot weight, target weight
 - **Profile**: active profile name, author
@@ -131,8 +131,9 @@ Sensors are categorized by update frequency and data type to determine optimal p
 
 **Sensor List:**
 - `sensor.meticulous_connected`: Connection status (binary)
-- `sensor.meticulous_state`: Current state (idle, brewing, steaming, heating, preheating, error)
-- `sensor.meticulous_brewing`: Extraction active flag (binary)
+- `sensor.meticulous_state`: Current machine state (Idle, Preheating, Heating, Brewing, Purging, Retracting, Closing Valve, Home, Booting, Starting)
+- `binary_sensor.meticulous_brewing`: Extraction active flag (binary)
+- `sensor.meticulous_preheat_remaining`: Time remaining for preheating in seconds
 
 **Temperature** (5 sensors)
 - `sensor.meticulous_boiler_temperature`: Boiler temp (device_class: temperature)

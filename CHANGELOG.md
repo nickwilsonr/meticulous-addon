@@ -2,6 +2,16 @@
 
 All notable user-facing changes to this add-on are documented here.
 
+## [0.30.0] - 2026-01-31
+
+### New Features
+- **Expanded machine states** — Machine now reports detailed states (Preheating, Heating, Purging, Retracting, Closing Valve, Booting, Starting) instead of just Idle/Brewing
+- **Preheat countdown timer** — New `preheat_remaining` sensor shows preheating progress in seconds
+- **Real-time status detection** — Detects preheating, heating cycles, purging operations, and other machine phases for better visibility into what your machine is doing
+
+### Improvements
+- Better Home Assistant state entity descriptions reflecting new states
+
 ## [0.29.2] - 2026-01-31
 
 ### Fixes

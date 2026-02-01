@@ -112,6 +112,7 @@ class MeticulousAddon:
             "last_shot_time",
             "sounds_enabled",
             "total_shots",
+            "preheat_remaining",
         }
         # Track last values for each field (for delta filtering)
         self.last_field_values: Dict[str, Any] = {}
@@ -140,6 +141,8 @@ class MeticulousAddon:
 
         # State tracking
         self.current_state = "unknown"
+        self.current_machine_status = "unknown"
+        self.current_preheat_remaining = None
         self.current_profile = None
         self.available_profiles = {}  # Map of profile_id -> profile_name
         self.device_info = None
@@ -294,6 +297,7 @@ class MeticulousAddon:
                 onCommunication=self._handle_communication_event,
                 onActuators=self._handle_actuators_event,
                 onMachineInfo=self._handle_machine_info_event,
+                onHeaterStatus=self._handle_heater_status_event,
             )
 
             # Log handler setup for debugging
@@ -307,6 +311,7 @@ class MeticulousAddon:
             logger.debug(f"  - onCommunication: {self._handle_communication_event}")
             logger.debug(f"  - onActuators: {self._handle_actuators_event}")
             logger.debug(f"  - onMachineInfo: {self._handle_machine_info_event}")
+            logger.debug(f"  - onHeaterStatus: {self._handle_heater_status_event}")
 
             # Initialize API
             self.api = Api(base_url=base_url, options=options)  # type: ignore[assignment]
@@ -613,6 +618,14 @@ class MeticulousAddon:
                 "payload_on": "true",
                 "payload_off": "false",
                 "description": "Toggle machine notification sounds",
+            },
+            "preheat_remaining": {
+                "component": "sensor",
+                "state_topic": f"{base}/preheat_remaining/state",
+                "name": "Preheat Timer",
+                "description": "Countdown timer for preheating (seconds)",
+                "unit_of_measurement": "s",
+                "icon": "mdi:timer-outline",
             },
             # Brightness: read-only sensor, control is via set_brightness command
             "brightness": {
@@ -1586,14 +1599,59 @@ class MeticulousAddon:
     # Socket.IO Event Handlers
     # =========================================================================
 
+    def _map_machine_status_to_state(self, machine_status: str, is_extracting: bool) -> str:
+        """Map detailed machine status to a user-friendly state.
+
+        Maps backend status values to states for Home Assistant.
+        Backend status values include: idle, heating, purge, retracting,
+        closing valve, home, boot, starting
+        """
+        # Priority 1: Check if preheating is active
+        if self.current_preheat_remaining is not None and self.current_preheat_remaining > 0:
+            return "Preheating"
+
+        # Priority 2: Map specific machine statuses
+        status_mapping = {
+            "idle": "Idle",
+            "heating": "Heating",
+            "purge": "Purging",
+            "retracting": "Retracting",
+            "closing valve": "Closing Valve",
+            "home": "Home",
+            "boot": "Booting",
+            "starting...": "Starting",
+        }
+
+        mapped_state = status_mapping.get(machine_status.lower(), machine_status.lower())
+
+        # If extracting and we don't have a more specific status, use "brewing"
+        if is_extracting and mapped_state == "Idle":
+            mapped_state = "Brewing"
+
+        return mapped_state
+
     def _handle_status_event(self, status: dict):
         """Handle real-time status updates from Socket.IO."""
         try:
-            # Extract state
-            state = status.get("state", "unknown")
-            if state != self.current_state:
-                logger.info(f"Machine state changed: {self.current_state} -> {state}")
-                self.current_state = state
+            # Extract detailed machine status (heating, purge, retracting, etc.)
+            machine_status = status.get("status", "unknown")
+            is_extracting = status.get("extracting", False)
+
+            # Map to user-friendly state
+            new_state = self._map_machine_status_to_state(machine_status, is_extracting)
+            if new_state != self.current_state:
+                logger.info(
+                    f"Machine state changed: {self.current_state} -> {new_state} "
+                    f"(status={machine_status})"
+                )
+                self.current_state = new_state
+
+            # Track detailed status separately
+            if machine_status != self.current_machine_status:
+                logger.debug(
+                    f"Machine status changed: {self.current_machine_status} -> " f"{machine_status}"
+                )
+                self.current_machine_status = machine_status
 
             # Detect profile changes
             loaded_profile = status.get("loaded_profile")
@@ -1619,8 +1677,8 @@ class MeticulousAddon:
                 temperature = getattr(sensors, "t", 0)
 
             sensor_data = {
-                "state": state,
-                "brewing": status.get("extracting", False),
+                "state": new_state,
+                "brewing": is_extracting,
                 "shot_timer": (
                     status.get("profile_time", 0) / 1000.0 if status.get("profile_time") else 0
                 ),  # Convert ms to seconds  # noqa: E501
@@ -1652,9 +1710,9 @@ class MeticulousAddon:
                 )
 
             # Log during brewing
-            if status.get("extracting"):
+            if is_extracting:
                 logger.debug(
-                    f"Brewing: {sensor_data['shot_timer']:.1f}s | "
+                    f"Brewing ({machine_status}): {sensor_data['shot_timer']:.1f}s | "
                     f"P: {pressure:.1f} bar | "
                     f"F: {flow:.1f} ml/s | "
                     f"W: {weight:.1f}g"
@@ -1760,6 +1818,47 @@ class MeticulousAddon:
     def _handle_machine_info_event(self, info: Any):
         """Handle machine info events from Socket.IO."""
         # Device/firmware info updates
+
+    def _handle_heater_status_event(self, preheat_remaining: int):
+        """Handle heater status events from Socket.IO.
+
+        Receives preheat_remaining time in seconds. When this value is > 0,
+        the machine is preheating. When it reaches 0, preheating is complete.
+        """
+        try:
+            # Track preheat state
+            old_preheat_remaining = self.current_preheat_remaining
+            self.current_preheat_remaining = preheat_remaining if preheat_remaining > 0 else None
+
+            # Log state changes
+            if old_preheat_remaining != self.current_preheat_remaining:
+                if self.current_preheat_remaining is not None:
+                    logger.info(f"Preheating started: {self.current_preheat_remaining}s remaining")
+                else:
+                    logger.info("Preheating complete")
+
+            # Update state if preheating status changed
+            if (old_preheat_remaining is None) != (self.current_preheat_remaining is None):
+                # Preheating state changed, re-map the state
+                machine_status = self.current_machine_status
+                is_extracting = False  # Note: preheat won't be happening during extraction
+                new_state = self._map_machine_status_to_state(machine_status, is_extracting)
+                if new_state != self.current_state:
+                    logger.info(
+                        f"Machine state changed: {self.current_state} -> {new_state} "
+                        f"(preheat state change)"
+                    )
+                    self.current_state = new_state
+
+            # For detailed preheat info, optionally publish remaining time
+            if self.loop:
+                preheat_data = {"preheat_remaining": preheat_remaining}
+                asyncio.run_coroutine_threadsafe(
+                    self.publish_to_homeassistant(preheat_data), self.loop
+                )
+
+        except Exception as e:
+            logger.error(f"Error handling heater status event: {e}", exc_info=True)
 
     # =========================================================================
     # Polling Updates (for non-real-time data)
