@@ -46,13 +46,24 @@ event_counts = {
 def handle_status(status: Any):
     """Handle status events."""
     event_counts["status"] += 1
-    logger.info(f"[STATUS #{event_counts['status']}] {status}")
+    logger.info(f"[STATUS #{event_counts['status']}]")
+    logger.info(f"  Type: {type(status)}")
+
+    # Show all attributes if it's an object
+    if hasattr(status, "__dict__"):
+        logger.info(f"  All attributes: {status.__dict__}")
+    else:
+        logger.info(f"  Raw value: {status}")
+
+    # Check specific fields
     if hasattr(status, "state"):
-        logger.info(f"  State: {status.state}")
+        logger.info(f"  >>> state field: {status.state}")
+    if hasattr(status, "status"):
+        logger.info(f"  >>> status field: {status.status}")
     if hasattr(status, "extracting"):
-        logger.info(f"  Extracting: {status.extracting}")
+        logger.info(f"  >>> extracting: {status.extracting}")
     if hasattr(status, "sensors"):
-        logger.info(f"  Sensors: {status.sensors}")
+        logger.info(f"  >>> sensors: {status.sensors}")
 
 
 def handle_temperature(temps: Any):

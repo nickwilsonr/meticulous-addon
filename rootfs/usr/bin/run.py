@@ -445,10 +445,26 @@ class MeticulousAddon:
                     mapping = self._mqtt_sensor_mapping().get(key)
                     if not mapping:
                         continue
+
                     topic = mapping["state_topic"]
+
                     # Convert booleans to lowercase strings for MQTT
                     if isinstance(value, bool):
                         payload = str(value).lower()
+                    # Ensure state values are always capitalized (Idle, not idle)
+                    # This is a safety net to catch any raw state from Socket.IO
+                    elif key == "state":
+                        if isinstance(value, str):
+                            # Ensure state is properly capitalized
+                            # (should already be from _map_machine_status_to_state)
+                            if value and value[0].islower():
+                                capitalized = value.capitalize()
+                                logger.warning(f"State lowercase '{value}' -> " f"'{capitalized}'")
+                                payload = capitalized
+                            else:
+                                payload = value
+                        else:
+                            payload = str(value)
                     else:
                         payload = (
                             str(value)
@@ -1640,8 +1656,9 @@ class MeticulousAddon:
     def _handle_status_event(self, status: dict):
         """Handle real-time status updates from Socket.IO."""
         try:
-            # Extract detailed machine status (heating, purge, retracting, etc.)
-            machine_status = status.get("status", "unknown")
+            # Extract detailed machine status from the backend state field
+            # The backend sends: "state" with values like "idle", "heating", "purge", etc.
+            machine_status = status.get("state", "unknown")
             is_extracting = status.get("extracting", False)
 
             # Map to user-friendly state
