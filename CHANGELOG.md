@@ -2,6 +2,11 @@
 
 All notable user-facing changes to this add-on are documented here.
 
+## [0.30.1] - 2026-01-31
+
+### Fixes
+- **State publication during preheat** — Machine state now correctly updates in Home Assistant when preheating begins or ends, not just the preheat countdown timer
+
 ## [0.30.0] - 2026-01-31
 
 ### New Features

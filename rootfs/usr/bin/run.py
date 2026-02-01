@@ -140,7 +140,7 @@ class MeticulousAddon:
         self.supervisor_token = os.getenv("SUPERVISOR_TOKEN")
 
         # State tracking
-        self.current_state = "unknown"
+        self.current_state = "Idle"
         self.current_machine_status = "unknown"
         self.current_preheat_remaining = None
         self.current_profile = None
@@ -625,7 +625,7 @@ class MeticulousAddon:
                 "name": "Preheat Timer",
                 "description": "Countdown timer for preheating (seconds)",
                 "unit_of_measurement": "s",
-                "icon": "mdi:timer-outline",
+                "icon": "mdi:timer",
             },
             # Brightness: read-only sensor, control is via set_brightness command
             "brightness": {
@@ -1275,6 +1275,10 @@ class MeticulousAddon:
         initial_data["connected"] = self.socket_connected
         # Infer brewing false (safe: machine idle until Socket.IO indicates otherwise)
         initial_data["brewing"] = False
+        # Default preheat timer to 0 (not preheating)
+        initial_data["preheat_remaining"] = 0
+        # Default state to Idle
+        initial_data["state"] = "Idle"
         logger.debug(
             f"Initial state: connected={initial_data['connected']}, "
             f"brewing={initial_data['brewing']}, "
@@ -1622,7 +1626,10 @@ class MeticulousAddon:
             "starting...": "Starting",
         }
 
-        mapped_state = status_mapping.get(machine_status.lower(), machine_status.lower())
+        mapped_state = status_mapping.get(
+            machine_status.lower(),
+            machine_status.capitalize() if machine_status else "Unknown",
+        )
 
         # If extracting and we don't have a more specific status, use "brewing"
         if is_extracting and mapped_state == "Idle":
@@ -1850,9 +1857,12 @@ class MeticulousAddon:
                     )
                     self.current_state = new_state
 
-            # For detailed preheat info, optionally publish remaining time
+            # For detailed preheat info, publish remaining time and updated state
             if self.loop:
-                preheat_data = {"preheat_remaining": preheat_remaining}
+                preheat_data = {
+                    "preheat_remaining": preheat_remaining,
+                    "state": self.current_state,  # Include mapped state
+                }
                 asyncio.run_coroutine_threadsafe(
                     self.publish_to_homeassistant(preheat_data), self.loop
                 )
