@@ -2,10 +2,10 @@
 
 All notable user-facing changes to this add-on are documented here.
 
-## [0.30.3] - 2026-02-04
+## [0.30.4] - 2026-02-04
 
 ### Fixes
-- **Entity cleanup on upgrade** — Fixed MQTT entity cleanup to properly remove old renamed sensor entities from Home Assistant during addon updates. Now tries multiple topic format variations to ensure removal works across upgrade scenarios.
+- **Entity cleanup on upgrade** — Old sensors and entities from previous versions are now properly removed from Home Assistant during addon updates
 
 ## [0.30.2] - 2026-02-04
 

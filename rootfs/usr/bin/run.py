@@ -829,9 +829,9 @@ class MeticulousAddon:
 
                 # Publish empty payloads to old topics (retain=True) to remove from HA
                 for topic in old_brew_topics:
-                    self.mqtt_client.publish(topic, "", qos=1, retain=True)
-                    logger.debug(f"Cleared old entity: {topic}")
-                    await asyncio.sleep(0.01)
+                    result = self.mqtt_client.publish(topic, "", qos=1, retain=True)
+                    logger.info(f"Cleared state/command topic: {topic} (rc={result.rc})")
+                    await asyncio.sleep(0.05)
 
                 # Also clear old discovery configs for the brew commands - try multiple formats
                 old_brew_commands = ["start_brew", "stop_brew", "continue_brew"]
@@ -842,9 +842,15 @@ class MeticulousAddon:
                     ]
                     for entity_id in possible_entity_ids:
                         config_topic = f"{self.discovery_prefix}/button/{entity_id}/config"
-                        self.mqtt_client.publish(config_topic, "", qos=1, retain=True)
-                        logger.debug(f"Cleared old discovery: {config_topic}")
-                        await asyncio.sleep(0.01)
+                        result = self.mqtt_client.publish(config_topic, "", qos=1, retain=True)
+                        logger.info(f"Cleared discovery config: {config_topic} (rc={result.rc})")
+                        await asyncio.sleep(0.05)
+
+                # Also ensure availability topic is properly cleared
+                availability_topic = f"{self.slug}/availability"
+                result = self.mqtt_client.publish(availability_topic, "", qos=1, retain=True)
+                logger.info(f"Cleared availability topic: {availability_topic} (rc={result.rc})")
+                await asyncio.sleep(0.05)
 
                 logger.info("Old brew_* entities cleaned up successfully")
 
@@ -859,9 +865,9 @@ class MeticulousAddon:
 
                 # Publish empty payloads to old topics (retain=True) to remove from HA
                 for topic in old_preheat_topics:
-                    self.mqtt_client.publish(topic, "", qos=1, retain=True)
-                    logger.debug(f"Cleared old entity: {topic}")
-                    await asyncio.sleep(0.01)
+                    result = self.mqtt_client.publish(topic, "", qos=1, retain=True)
+                    logger.info(f"Cleared state topic: {topic} (rc={result.rc})")
+                    await asyncio.sleep(0.05)
 
                 # Also clear old discovery configs - try multiple possible topic formats
                 possible_entity_ids = [
@@ -870,9 +876,15 @@ class MeticulousAddon:
                 ]
                 for entity_id in possible_entity_ids:
                     config_topic = f"{self.discovery_prefix}/sensor/{entity_id}/config"
-                    self.mqtt_client.publish(config_topic, "", qos=1, retain=True)
-                    logger.debug(f"Cleared old discovery: {config_topic}")
-                    await asyncio.sleep(0.01)
+                    result = self.mqtt_client.publish(config_topic, "", qos=1, retain=True)
+                    logger.info(f"Cleared discovery config: {config_topic} (rc={result.rc})")
+                    await asyncio.sleep(0.05)
+
+                # Also ensure availability topic is properly cleared
+                availability_topic = f"{self.slug}/availability"
+                result = self.mqtt_client.publish(availability_topic, "", qos=1, retain=True)
+                logger.info(f"Cleared availability topic: {availability_topic} (rc={result.rc})")
+                await asyncio.sleep(0.05)
 
                 logger.info("Old preheat_remaining entity cleaned up successfully")
 
