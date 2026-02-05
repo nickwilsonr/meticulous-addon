@@ -821,6 +821,7 @@ class MeticulousAddon:
                 logger.info("Detected pre-0.28.0 version - cleaning up old brew_* MQTT entities")
                 old_brew_topics = [
                     f"{self.state_prefix}/brew/state",  # Old state
+                    f"{self.slug}/brew/state",  # Alternative prefix
                     f"{self.command_prefix}/start_brew",
                     f"{self.command_prefix}/stop_brew",
                     f"{self.command_prefix}/continue_brew",
@@ -832,14 +833,18 @@ class MeticulousAddon:
                     logger.debug(f"Cleared old entity: {topic}")
                     await asyncio.sleep(0.01)
 
-                # Also clear old discovery configs for the brew commands
+                # Also clear old discovery configs for the brew commands - try multiple formats
                 old_brew_commands = ["start_brew", "stop_brew", "continue_brew"]
                 for cmd in old_brew_commands:
-                    entity_id = f"{self.slug}_{cmd}"
-                    config_topic = f"{self.discovery_prefix}/button/{entity_id}/config"
-                    self.mqtt_client.publish(config_topic, "", qos=1, retain=True)
-                    logger.debug(f"Cleared old discovery: {config_topic}")
-                    await asyncio.sleep(0.01)
+                    possible_entity_ids = [
+                        f"{self.slug}_{cmd}",
+                        f"meticulous_espresso_{cmd}",  # Hardcoded fallback
+                    ]
+                    for entity_id in possible_entity_ids:
+                        config_topic = f"{self.discovery_prefix}/button/{entity_id}/config"
+                        self.mqtt_client.publish(config_topic, "", qos=1, retain=True)
+                        logger.debug(f"Cleared old discovery: {config_topic}")
+                        await asyncio.sleep(0.01)
 
                 logger.info("Old brew_* entities cleaned up successfully")
 
@@ -848,6 +853,8 @@ class MeticulousAddon:
                 logger.info("Detected pre-0.31.0 version - cleaning preheat_remaining MQTT entity")
                 old_preheat_topics = [
                     f"{self.state_prefix}/preheat_remaining/state",
+                    f"{self.slug}/sensor/preheat_remaining/state",  # Alternative format
+                    f"{self.slug}/preheat_remaining/state",  # Another alternative
                 ]
 
                 # Publish empty payloads to old topics (retain=True) to remove from HA
@@ -856,12 +863,16 @@ class MeticulousAddon:
                     logger.debug(f"Cleared old entity: {topic}")
                     await asyncio.sleep(0.01)
 
-                # Also clear old discovery config for preheat_remaining sensor
-                entity_id = f"{self.slug}_preheat_remaining"
-                config_topic = f"{self.discovery_prefix}/sensor/{entity_id}/config"
-                self.mqtt_client.publish(config_topic, "", qos=1, retain=True)
-                logger.debug(f"Cleared old discovery: {config_topic}")
-                await asyncio.sleep(0.01)
+                # Also clear old discovery configs - try multiple possible topic formats
+                possible_entity_ids = [
+                    f"{self.slug}_preheat_remaining",
+                    "meticulous_espresso_preheat_remaining",  # Hardcoded fallback
+                ]
+                for entity_id in possible_entity_ids:
+                    config_topic = f"{self.discovery_prefix}/sensor/{entity_id}/config"
+                    self.mqtt_client.publish(config_topic, "", qos=1, retain=True)
+                    logger.debug(f"Cleared old discovery: {config_topic}")
+                    await asyncio.sleep(0.01)
 
                 logger.info("Old preheat_remaining entity cleaned up successfully")
 

@@ -2,6 +2,11 @@
 
 All notable user-facing changes to this add-on are documented here.
 
+## [0.30.3] - 2026-02-04
+
+### Fixes
+- **Entity cleanup on upgrade** — Fixed MQTT entity cleanup to properly remove old renamed sensor entities from Home Assistant during addon updates. Now tries multiple topic format variations to ensure removal works across upgrade scenarios.
+
 ## [0.30.2] - 2026-02-04
 
 ### Improvements
@@ -10,7 +15,6 @@ All notable user-facing changes to this add-on are documented here.
 ### Fixes
 - **Preheat countdown sensor** — Now displays with whole-second precision (e.g., "45s" instead of "45.63s") and uses proper timer icon in Home Assistant
 - **Preheat countdown reset** — Countdown timer properly resets to 0 when preheating finishes, preventing stale countdown values in Home Assistant
-- **Entity cleanup on upgrade** — Old renamed sensor entities are now properly removed from Home Assistant during addon updates, preventing duplicates and stale entities
 
 ## [0.30.1] - 2026-01-31
 
