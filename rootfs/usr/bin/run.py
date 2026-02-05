@@ -787,10 +787,11 @@ class MeticulousAddon:
             logger.error(f"Error clearing old discovery: {e}", exc_info=True)
 
     async def _mqtt_cleanup_old_entity_versions(self) -> None:
-        """Clean up old entities by discovering what exists and removing it.
+        """Clean up old entities by discovering MQTT discovery configs.
 
-        Instead of guessing entity names, we subscribe to a wildcard to discover
-        all entities the MQTT broker knows about for this device, then clear them.
+        Subscribes to the Home Assistant MQTT discovery namespace to find all existing
+        configs, filters for those belonging to this device, and clears them. This
+        approach is device-agnostic and works regardless of entity name changes.
         """
         if not (self.mqtt_enabled and self.mqtt_client):
             logger.debug("Skipping entity cleanup: mqtt not ready")
@@ -812,52 +813,55 @@ class MeticulousAddon:
         logger.info("Discovering old device entities...")
 
         try:
-            # Discover all entities by subscribing to wildcard
-            # Broker will send all retained messages matching the wildcard
+            # Discover all Home Assistant MQTT discovery configs
+            # Broker will send all retained configs matching this pattern
             discovered_topics = []
 
             def on_message_discover(client, userdata, msg):
-                """Collect discovered entity topics."""
-                discovered_topics.append(msg.topic)
-                logger.debug(f"Discovered entity: {msg.topic}")
+                """Collect discovery config topics for this device."""
+                # Filter for topics containing this device's slug
+                if self.slug in msg.topic:
+                    discovered_topics.append(msg.topic)
+                    logger.debug(f"Discovered config: {msg.topic}")
 
             # Temporarily override the message handler to collect discoveries
             original_handler = self.mqtt_client.on_message
             self.mqtt_client.on_message = on_message_discover
 
-            # Subscribe to all discovery topics for this device
-            # This wildcard asks the broker for entities under homeassistant/*/
-            discovery_pattern = f"{self.discovery_prefix}/+/{self.slug}*/#"
-            logger.info(f"Discovering entities with pattern: {discovery_pattern}")
-            self.mqtt_client.subscribe(discovery_pattern, qos=1)
+            # Subscribe to all discovery configs on the broker
+            # Pattern: homeassistant/<component>/<entity_id>/config
+            # The entity_id will contain our device slug if it belongs to us
+            self.mqtt_client.subscribe("homeassistant/+/+/config", qos=1)
+            logger.debug("Subscribed to discovery configs, waiting for broker...")
 
-            # Wait for broker to send all retained messages (need sufficient time)
-            await asyncio.sleep(2.0)
+            # Give the broker time to deliver all matching configs
+            await asyncio.sleep(0.5)
 
             # Unsubscribe from discovery
-            self.mqtt_client.unsubscribe(discovery_pattern)
+            self.mqtt_client.unsubscribe("homeassistant/+/+/config")
 
-            # Restore original handler
+            # Restore original message handler
             self.mqtt_client.on_message = original_handler
 
-            # Clear everything we discovered
+            # Also add device namespace topics
             all_topics_to_clear = discovered_topics.copy()
-
-            # Also clear availability topics
-            for availability_pattern in [
+            device_namespace_topics = [
                 f"{self.slug}/availability",
-                f"{self.state_prefix}",
-                f"{self.command_prefix}",
-            ]:
-                all_topics_to_clear.append(availability_pattern)
+                f"{self.state_prefix}",  # e.g., meticulous_espresso/sensor
+                f"{self.command_prefix}",  # e.g., meticulous_espresso/command
+            ]
+            all_topics_to_clear.extend(device_namespace_topics)
 
             if all_topics_to_clear:
-                logger.info(f"Clearing {len(all_topics_to_clear)} discovered topics...")
+                logger.info(f"Clearing {len(all_topics_to_clear)} old topics...")
                 for topic in all_topics_to_clear:
                     self.mqtt_client.publish(topic, "", qos=1, retain=True)
                     await asyncio.sleep(0.01)
 
-            logger.info(f"Device reset complete: cleared {len(discovered_topics)} entities")
+            logger.info(
+                f"Device cleanup complete: cleared {len(discovered_topics)} configs "
+                f"from discovery namespace"
+            )
 
             # Update stored version
             addon_state["version"] = current_version
