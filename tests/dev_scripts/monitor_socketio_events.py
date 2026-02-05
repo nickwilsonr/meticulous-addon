@@ -266,8 +266,7 @@ def find_keywords_in_value(value: Any, path: str = "") -> List[Tuple[str, str, s
 
 def handle_status_event(*args):
     """Specific handler for 'status' events to capture state transitions."""
-    global state_transitions, previous_state_name, current_state_name
-    global state_machine_timeline, is_brewing_timeline, enrichment_decisions, previous_is_brewing
+    global previous_state_name, current_state_name, previous_is_brewing
     event_counts["status_events"] += 1
 
     if args and isinstance(args[0], dict):
@@ -336,8 +335,6 @@ def handle_status_event(*args):
 
 def handle_heater_status_event(*args):
     """Specific handler for 'heater_status' events - capture everything."""
-    global latest_heater_status_message, current_state_name
-    global enrichment_decisions
     event_counts["heater_status_events"] += 1
 
     # Log EVERYTHING about heater_status events
@@ -361,8 +358,6 @@ def handle_any_event(event_name: str, *args):
     Catch-all handler for Socket.IO events not explicitly handled.
     Logs ALL events for comprehensive monitoring.
     """
-    global previous_values
-
     event_counts["total_events"] += 1
 
     # Track event types
