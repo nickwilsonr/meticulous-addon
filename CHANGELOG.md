@@ -5,7 +5,7 @@ All notable user-facing changes to this add-on are documented here.
 ## [0.30.6] - 2026-02-04
 
 ### Fixes
-- **Entity cleanup on upgrade** — Complete device reset on version changes now removes all old entities and recreates them fresh, eliminating orphaned sensors or commands from previous versions
+- **Entity cleanup on upgrade** — Old sensors and entities from previous versions are now properly removed from Home Assistant during addon updates
 
 ## [0.30.2] - 2026-02-04
 
