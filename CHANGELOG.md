@@ -2,6 +2,16 @@
 
 All notable user-facing changes to this add-on are documented here.
 
+## [0.30.2] - 2026-02-04
+
+### Improvements
+- **Detailed machine state detection** — Machine state now reflects actual extraction stages and phases (e.g., "Pre Infusion", "Ramp", "Hold", "Decline", etc.) for visibility into exactly what your machine is doing, not just Idle/Brewing
+
+### Fixes
+- **Preheat countdown sensor** — Now displays with whole-second precision (e.g., "45s" instead of "45.63s") and uses proper timer icon in Home Assistant
+- **Preheat countdown reset** — Countdown timer properly resets to 0 when preheating finishes, preventing stale countdown values in Home Assistant
+- **Entity cleanup on upgrade** — Old renamed sensor entities are now properly removed from Home Assistant during addon updates, preventing duplicates and stale entities
+
 ## [0.30.1] - 2026-01-31
 
 ### Fixes

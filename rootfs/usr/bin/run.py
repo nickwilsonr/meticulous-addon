@@ -6,6 +6,7 @@ import json as jsonlib
 import logging
 import os
 import random
+import signal
 import sys
 import time
 import warnings
@@ -112,7 +113,7 @@ class MeticulousAddon:
             "last_shot_time",
             "sounds_enabled",
             "total_shots",
-            "preheat_remaining",
+            "preheat_countdown",
         }
         # Track last values for each field (for delta filtering)
         self.last_field_values: Dict[str, Any] = {}
@@ -142,7 +143,6 @@ class MeticulousAddon:
         # State tracking
         self.current_state = "Idle"
         self.current_machine_status = "unknown"
-        self.current_preheat_remaining = None
         self.current_profile = None
         self.available_profiles = {}  # Map of profile_id -> profile_name
         self.device_info = None
@@ -635,13 +635,14 @@ class MeticulousAddon:
                 "payload_off": "false",
                 "description": "Toggle machine notification sounds",
             },
-            "preheat_remaining": {
+            "preheat_countdown": {
                 "component": "sensor",
-                "state_topic": f"{base}/preheat_remaining/state",
+                "state_topic": f"{base}/preheat_countdown/state",
                 "name": "Preheat Timer",
-                "description": "Countdown timer for preheating (seconds)",
+                "description": "Countdown timer for preheating",
                 "unit_of_measurement": "s",
                 "icon": "mdi:timer",
+                "suggest_precision": "0",
             },
             # Brightness: read-only sensor, control is via set_brightness command
             "brightness": {
@@ -805,12 +806,18 @@ class MeticulousAddon:
             logger.debug(f"Version unchanged ({current_version}) - no cleanup needed")
             return
 
+        # If no previous version stored, assume it's an upgrade from before version tracking
+        # Treat it as upgrading from 0.0.0 so all legacy cleanups will run
+        if previous_version is None:
+            logger.info("No previous version found - treating as upgrade from pre-tracking version")
+            previous_version = "0.0.0"
+
         logger.info(f"Version changed: {previous_version} -> {current_version}")
         logger.info("Cleaning up MQTT entities from previous versions...")
 
         try:
             # Migration: v0.27.x to v0.28.0 - brew_* commands renamed to shot_*
-            if previous_version and self._version_less_than(previous_version, "0.28.0"):
+            if self._version_less_than(previous_version, "0.28.0"):
                 logger.info("Detected pre-0.28.0 version - cleaning up old brew_* MQTT entities")
                 old_brew_topics = [
                     f"{self.state_prefix}/brew/state",  # Old state
@@ -835,6 +842,28 @@ class MeticulousAddon:
                     await asyncio.sleep(0.01)
 
                 logger.info("Old brew_* entities cleaned up successfully")
+
+            # Migration: v0.30.x to v0.31.0 - preheat_remaining sensor renamed to preheat_countdown
+            if self._version_less_than(previous_version, "0.31.0"):
+                logger.info("Detected pre-0.31.0 version - cleaning preheat_remaining MQTT entity")
+                old_preheat_topics = [
+                    f"{self.state_prefix}/preheat_remaining/state",
+                ]
+
+                # Publish empty payloads to old topics (retain=True) to remove from HA
+                for topic in old_preheat_topics:
+                    self.mqtt_client.publish(topic, "", qos=1, retain=True)
+                    logger.debug(f"Cleared old entity: {topic}")
+                    await asyncio.sleep(0.01)
+
+                # Also clear old discovery config for preheat_remaining sensor
+                entity_id = f"{self.slug}_preheat_remaining"
+                config_topic = f"{self.discovery_prefix}/sensor/{entity_id}/config"
+                self.mqtt_client.publish(config_topic, "", qos=1, retain=True)
+                logger.debug(f"Cleared old discovery: {config_topic}")
+                await asyncio.sleep(0.01)
+
+                logger.info("Old preheat_remaining entity cleaned up successfully")
 
             # Update stored version for next startup
             addon_state["version"] = current_version
@@ -952,6 +981,10 @@ class MeticulousAddon:
                 elif key == "shot_timer":
                     payload["unit_of_measurement"] = "s"
                     payload["icon"] = "mdi:timer"
+                elif key == "preheat_countdown":
+                    payload["unit_of_measurement"] = "s"
+                    payload["icon"] = "mdi:timer"
+                    payload["suggest_precision"] = 0
                 elif key in ("shot_weight", "target_weight"):
                     payload["unit_of_measurement"] = "g"
                     payload["icon"] = "mdi:scale-bathroom"
@@ -1292,7 +1325,7 @@ class MeticulousAddon:
         # Infer brewing false (safe: machine idle until Socket.IO indicates otherwise)
         initial_data["brewing"] = False
         # Default preheat timer to 0 (not preheating)
-        initial_data["preheat_remaining"] = 0
+        initial_data["preheat_countdown"] = 0
         # Default state to Idle
         initial_data["state"] = "Idle"
         logger.debug(
@@ -1619,68 +1652,139 @@ class MeticulousAddon:
     # Socket.IO Event Handlers
     # =========================================================================
 
-    def _map_machine_status_to_state(self, machine_status: str, is_extracting: bool) -> str:
-        """Map detailed machine status to a user-friendly state.
+    def _normalize_state_name(self, state_name: str) -> str:
+        """Normalize state information for consistent representation.
 
-        Maps backend status values to states for Home Assistant.
-        Backend status values include: idle, heating, purge, retracting,
-        closing valve, home, boot, starting
+        Converts raw state names from Socket.IO to canonical form:
+        - Replaces underscores with spaces
+        - Applies smart title casing
+        - Preserves abbreviations (PI, PI_PHASE → "PI Phase" or "PI")
+
+        Examples:
+            "idle" → "Idle"
+            "click to start" → "Click to Start"
+            "PI" → "PI"
+            "pre_infusion" → "Pre Infusion"
+            "END_STAGE" → "End Stage"
         """
-        # Priority 1: Check if preheating is active
-        if self.current_preheat_remaining is not None and self.current_preheat_remaining > 0:
-            return "Preheating"
+        # Words that should remain lowercase (unless at start of phrase)
+        lowercase_words = {"to", "in", "a", "an", "the", "at", "by", "or", "and", "for", "of"}
 
-        # Priority 2: Map specific machine statuses
-        status_mapping = {
-            "idle": "Idle",
-            "heating": "Heating",
-            "purge": "Purging",
-            "retracting": "Retracting",
-            "closing valve": "Closing Valve",
-            "home": "Home",
-            "boot": "Booting",
-            "starting...": "Starting",
-        }
+        # Replace underscores with spaces, trim
+        state_name = state_name.replace("_", " ").strip()
 
-        mapped_state = status_mapping.get(
-            machine_status.lower(),
-            machine_status.capitalize() if machine_status else "Unknown",
-        )
+        if not state_name:
+            return state_name
 
-        # If extracting and we don't have a more specific status, use "brewing"
-        if is_extracting and mapped_state == "Idle":
-            mapped_state = "Brewing"
+        # Split into words
+        words = state_name.split()
 
-        return mapped_state
+        # Normalize each word with smart capitalization
+        normalized_words = []
+        for i, word in enumerate(words):
+            # Preserve all-uppercase abbreviations (PI, PI, etc.) in any position
+            if len(word) <= 2 and word.isupper():
+                normalized_words.append(word)
+            elif i == 0:
+                # Always capitalize first word (unless it's an abbreviation)
+                normalized_words.append(word.capitalize())
+            elif word.lower() in lowercase_words:
+                # Keep small words lowercase
+                normalized_words.append(word.lower())
+            else:
+                # Capitalize content words
+                normalized_words.append(word.capitalize())
+
+        return " ".join(normalized_words)
+
+    def _has_active_preheat(self) -> bool:
+        """Check if preheat is currently active based on recent heater_status events.
+
+        Preheat is considered active if we have a countdown value > 0
+        that was updated recently (within the last 2 seconds).
+        """
+        if not hasattr(self, "_latest_preheat_countdown"):
+            return False
+
+        if not hasattr(self, "_preheat_active_timestamp"):
+            return False
+
+        # Check if event is recent (within 2 seconds)
+        time_since_last_event = time.time() - self._preheat_active_timestamp
+        if time_since_last_event > 2.0:
+            return False
+
+        # Check if countdown value is positive
+        return self._latest_preheat_countdown > 0
+
+    def _publish_preheat_countdown(self, countdown_seconds: float) -> None:
+        """Publish preheat countdown value to MQTT sensor.
+
+        Topic: meticulous_espresso/sensor/preheat_countdown/state
+        Value: Countdown in seconds (e.g., 489.63)
+        """
+        if not (self.mqtt_enabled and self.mqtt_client):
+            return
+
+        try:
+            topic = f"{self.state_prefix}/preheat_countdown/state"
+            self.mqtt_client.publish(topic, str(round(countdown_seconds, 2)), qos=1, retain=True)
+            logger.debug(f"Published preheat countdown to MQTT: {countdown_seconds}s")
+        except Exception as e:
+            logger.error(f"Error publishing preheat countdown: {e}")
 
     def _handle_status_event(self, status: dict):
-        """Handle real-time status updates from Socket.IO."""
+        """Handle real-time status updates from Socket.IO.
+
+        Uses arg[0].name for detailed state detection with preheat awareness.
+        Falls back to coarse 'state' field if 'name' is missing.
+        """
         try:
-            # Extract detailed machine status from the backend state field
-            # The backend sends: "state" with values like "idle", "heating", "purge", etc.
-            machine_status = status.get("state", "unknown")
+            # PRIMARY: Extract detailed state from 'name' field (detailed stage names)
+            detailed_state_raw = status.get("name", None)
+            coarse_state = status.get("state", "unknown").lower()
             is_extracting = status.get("extracting", False)
 
-            # Map to user-friendly state
-            new_state = self._map_machine_status_to_state(machine_status, is_extracting)
-            if new_state != self.current_state:
-                logger.info(
-                    f"Machine state changed: {self.current_state} -> {new_state} "
-                    f"(status={machine_status})"
-                )
-                self.current_state = new_state
+            # Change detection: only process state when it actually changes
+            if not hasattr(self, "_previous_state_name"):
+                self._previous_state_name = None
 
-            # Track detailed status separately
-            if machine_status != self.current_machine_status:
-                logger.debug(
-                    f"Machine status changed: {self.current_machine_status} -> " f"{machine_status}"
-                )
-                self.current_machine_status = machine_status
+            if detailed_state_raw and detailed_state_raw != self._previous_state_name:
+                # Detailed state changed - determine output state
+                if detailed_state_raw.lower() == "idle" and self._has_active_preheat():
+                    # Idle + active preheat → "Preheating"
+                    new_state = "Preheating"
+                else:
+                    # Use normalized detailed state name
+                    new_state = self._normalize_state_name(detailed_state_raw)
+
+                # Update state if changed
+                if new_state != self.current_state:
+                    logger.info(f"State transition: {self.current_state} → {new_state}")
+                    self.current_state = new_state
+
+                self._previous_state_name = detailed_state_raw
+
+            elif not detailed_state_raw and self._previous_state_name is not None:
+                # FALLBACK: If 'name' field missing (rare), use fallback coarse state
+                logger.warning(f"Missing 'name' field in status - using fallback: {coarse_state}")
+                fallback_state = coarse_state.capitalize()
+                if fallback_state != self.current_state:
+                    logger.info(
+                        f"State transition (fallback): {self.current_state} → " f"{fallback_state}"
+                    )
+                    self.current_state = fallback_state
+                self._previous_state_name = fallback_state
+
+            # Track coarse status separately for debugging
+            if coarse_state != self.current_machine_status:
+                logger.debug(f"Machine status: {self.current_machine_status} → {coarse_state}")
+                self.current_machine_status = coarse_state
 
             # Detect profile changes
             loaded_profile = status.get("loaded_profile")
             if loaded_profile and loaded_profile != self.current_profile:
-                logger.info(f"Profile changed: {self.current_profile} -> {loaded_profile}")
+                logger.info(f"Profile changed: {self.current_profile} → {loaded_profile}")
                 self.current_profile = loaded_profile
                 # Trigger profile info update
                 if self.loop:
@@ -1689,7 +1793,6 @@ class MeticulousAddon:
             # Extract sensor data
             sensors = status.get("sensors", {})
             if isinstance(sensors, dict):
-                # Convert dict to SensorData if needed
                 pressure = sensors.get("p", 0)
                 flow = sensors.get("f", 0)
                 weight = sensors.get("w", 0)
@@ -1700,12 +1803,16 @@ class MeticulousAddon:
                 weight = getattr(sensors, "w", 0)
                 temperature = getattr(sensors, "t", 0)
 
+            # Compute binary sensor: "Is Brewing"
+            # True only when extracting (not idle AND actively extracting)
+            brewing = coarse_state != "idle" and is_extracting
+
             sensor_data = {
-                "state": new_state,
-                "brewing": is_extracting,
+                "state": self.current_state,
+                "brewing": brewing,
                 "shot_timer": (
                     status.get("profile_time", 0) / 1000.0 if status.get("profile_time") else 0
-                ),  # Convert ms to seconds  # noqa: E501
+                ),
                 "elapsed_time": status.get("time", 0) / 1000.0 if status.get("time") else 0,
                 "pressure": pressure,
                 "flow_rate": flow,
@@ -1734,9 +1841,9 @@ class MeticulousAddon:
                 )
 
             # Log during brewing
-            if is_extracting:
+            if brewing:
                 logger.debug(
-                    f"Brewing ({machine_status}): {sensor_data['shot_timer']:.1f}s | "
+                    f"Brewing ({coarse_state}): {sensor_data['shot_timer']:.1f}s | "
                     f"P: {pressure:.1f} bar | "
                     f"F: {flow:.1f} ml/s | "
                     f"W: {weight:.1f}g"
@@ -1843,46 +1950,64 @@ class MeticulousAddon:
         """Handle machine info events from Socket.IO."""
         # Device/firmware info updates
 
-    def _handle_heater_status_event(self, preheat_remaining: int):
+    def _handle_heater_status_event(self, preheat_countdown: float):
         """Handle heater status events from Socket.IO.
 
-        Receives preheat_remaining time in seconds. When this value is > 0,
-        the machine is preheating. When it reaches 0, preheating is complete.
+        Receives preheat countdown value (float in seconds). This drives the
+        preheat_countdown sensor and enables preheat state detection.
+        When countdown > 0, preheat is active. When it reaches 0, preheat is complete.
         """
         try:
-            # Track preheat state
-            old_preheat_remaining = self.current_preheat_remaining
-            self.current_preheat_remaining = preheat_remaining if preheat_remaining > 0 else None
+            # Store latest countdown for preheat state detection and sensor publication
+            old_countdown = getattr(self, "_latest_preheat_countdown", None)
+            self._latest_preheat_countdown = preheat_countdown
+            self._preheat_active_timestamp = time.time()
 
-            # Log state changes
-            if old_preheat_remaining != self.current_preheat_remaining:
-                if self.current_preheat_remaining is not None:
-                    logger.info(f"Preheating started: {self.current_preheat_remaining}s remaining")
-                else:
-                    logger.info("Preheating complete")
+            # Publish countdown to sensor (always, ~1 event per second during preheat)
+            self._publish_preheat_countdown(preheat_countdown)
 
-            # Update state if preheating status changed
-            if (old_preheat_remaining is None) != (self.current_preheat_remaining is None):
-                # Preheating state changed, re-map the state
-                machine_status = self.current_machine_status
-                is_extracting = False  # Note: preheat won't be happening during extraction
-                new_state = self._map_machine_status_to_state(machine_status, is_extracting)
-                if new_state != self.current_state:
-                    logger.info(
-                        f"Machine state changed: {self.current_state} -> {new_state} "
-                        f"(preheat state change)"
+            # Detect preheat state changes (started vs completed)
+            preheat_was_active = (
+                (old_countdown is not None and old_countdown > 0)
+                if old_countdown is not None
+                else False
+            )
+            preheat_is_active = preheat_countdown > 0
+
+            # Log transitions
+            if preheat_is_active and not preheat_was_active:
+                logger.info(f"Preheat started: {preheat_countdown}s remaining")
+            elif not preheat_is_active and preheat_was_active:
+                logger.info("Preheat complete")
+                # Reset countdown sensor when preheat completes
+                self._publish_preheat_countdown(0.0)
+
+            # Update state if preheat activity changed
+            if preheat_is_active != preheat_was_active:
+                # Preheat state changed - update machine state
+                detailed_state = getattr(self, "_previous_state_name", "idle") or "idle"
+
+                if detailed_state.lower() == "idle" and preheat_is_active:
+                    # Transitioning to preheating
+                    new_state = "Preheating"
+                    if new_state != self.current_state:
+                        logger.info(f"State transition: {self.current_state} → {new_state}")
+                        self.current_state = new_state
+                elif not preheat_is_active and self.current_state == "Preheating":
+                    # Transitioning out of preheating
+                    new_state = self._normalize_state_name(detailed_state)
+                    if new_state != self.current_state:
+                        logger.info(f"State transition: {self.current_state} → {new_state}")
+                        self.current_state = new_state
+                        # Reset countdown sensor when leaving Preheating
+                        self._publish_preheat_countdown(0.0)
+
+                # Publish updated state
+                if self.loop:
+                    state_data = {"state": self.current_state}
+                    asyncio.run_coroutine_threadsafe(
+                        self.publish_to_homeassistant(state_data), self.loop
                     )
-                    self.current_state = new_state
-
-            # For detailed preheat info, publish remaining time and updated state
-            if self.loop:
-                preheat_data = {
-                    "preheat_remaining": preheat_remaining,
-                    "state": self.current_state,  # Include mapped state
-                }
-                asyncio.run_coroutine_threadsafe(
-                    self.publish_to_homeassistant(preheat_data), self.loop
-                )
 
         except Exception as e:
             logger.error(f"Error handling heater status event: {e}", exc_info=True)
@@ -2183,6 +2308,21 @@ class MeticulousAddon:
     async def run(self):
         """Main run loop."""
         self.loop = asyncio.get_running_loop()
+
+        # Register signal handlers for graceful shutdown on SIGTERM/SIGINT
+        def _signal_handler():
+            """Handle SIGTERM/SIGINT by stopping the main loop gracefully."""
+            logger.info("Signal received - initiating graceful shutdown")
+            self.running = False
+
+        try:
+            self.loop.add_signal_handler(signal.SIGTERM, _signal_handler)
+            self.loop.add_signal_handler(signal.SIGINT, _signal_handler)
+            logger.debug("Signal handlers registered (SIGTERM, SIGINT)")
+        except NotImplementedError:
+            # Signal handlers not supported on this platform (e.g., Windows)
+            logger.debug("Signal handlers not available on this platform")
+
         logger.info("Starting Meticulous Espresso Add-on")
         logger.info(
             f"Configuration: machine_ip={self.machine_ip}, "
