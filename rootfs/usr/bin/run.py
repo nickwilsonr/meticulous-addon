@@ -496,160 +496,112 @@ class MeticulousAddon:
     # =========================================================================
 
     def _mqtt_sensor_mapping(self) -> Dict[str, Dict[str, str]]:
+        """Return mapping of available sensors for Home Assistant discovery.
+
+        Contains only structural/routing info (component, state_topic, control fields).
+        Display info (name, description) is built dynamically in _mqtt_publish_discovery().
+        """
         base = self.state_prefix
         # fmt: off
         return {
             "connected": {
                 "component": "binary_sensor",
                 "state_topic": f"{base}/connected/state",
-                "name": "Meticulous Connected",
-                "description": "Whether the machine is connected",
             },
             "state": {
                 "component": "sensor",
                 "state_topic": f"{base}/state/state",
-                "name": "Meticulous State",
-                "description": "Current machine state",
             },
             "brewing": {
                 "component": "binary_sensor",
                 "state_topic": f"{base}/brewing/state",
-                "name": "Meticulous Brewing",
-                "description": "Whether a shot is currently brewing",
             },
             "boiler_temperature": {
                 "component": "sensor",
                 "state_topic": f"{base}/boiler_temperature/state",
-                "name": "Boiler Temperature",
-                "description": "Current boiler water temperature",
             },
             "brew_head_temperature": {
                 "component": "sensor",
                 "state_topic": f"{base}/brew_head_temperature/state",
-                "name": "Brew Head Temperature",
-                "description": "Current brew head temperature",
             },
             "external_temp_1": {
                 "component": "sensor",
                 "state_topic": f"{base}/external_temp_1/state",
-                "name": "External Temperature 1",
-                "description": "External temperature sensor 1",
             },
             "external_temp_2": {
                 "component": "sensor",
                 "state_topic": f"{base}/external_temp_2/state",
-                "name": "External Temperature 2",
-                "description": "External temperature sensor 2",
             },
             "pressure": {
                 "component": "sensor",
                 "state_topic": f"{base}/pressure/state",
-                "name": "Pressure",
-                "description": "Pressure in portafilter during extraction",
             },
             "flow_rate": {
                 "component": "sensor",
                 "state_topic": f"{base}/flow_rate/state",
-                "name": "Flow Rate",
-                "description": "Current flow rate during extraction",
             },
             "shot_timer": {
                 "component": "sensor",
                 "state_topic": f"{base}/shot_timer/state",
-                "name": "Shot Timer",
-                "description": "Time elapsed in current shot",
             },
             "shot_weight": {
                 "component": "sensor",
                 "state_topic": f"{base}/shot_weight/state",
-                "name": "Shot Weight",
-                "description": "Current weight of espresso in cup",
             },
             "total_shots": {
                 "component": "sensor",
                 "state_topic": f"{base}/total_shots/state",
-                "name": "Total Shots",
-                "description": "Total number of shots pulled",
             },
             "last_shot_name": {
                 "component": "sensor",
                 "state_topic": f"{base}/last_shot_name/state",
-                "name": "Last Shot Name",
-                "description": "Name of the last shot",
             },
             "last_shot_rating": {
                 "component": "sensor",
                 "state_topic": f"{base}/last_shot_rating/state",
-                "name": "Last Shot Rating",
-                "description": "User rating of last shot",
             },
             "last_shot_time": {
                 "component": "sensor",
                 "state_topic": f"{base}/last_shot_time/state",
-                "name": "Last Shot Time",
-                "description": "Timestamp of last shot",
-                "device_class": "timestamp",
             },
             "profile_author": {
                 "component": "sensor",
                 "state_topic": f"{base}/profile_author/state",
-                "name": "Profile Author",
-                "description": "Author of active espresso profile",
             },
             "target_temperature": {
                 "component": "sensor",
                 "state_topic": f"{base}/target_temperature/state",
-                "name": "Target Temperature",
-                "description": "Target temperature from profile",
             },
             "target_weight": {
                 "component": "sensor",
                 "state_topic": f"{base}/target_weight/state",
-                "name": "Target Weight",
-                "description": "Target espresso weight from profile",
             },
             "firmware_version": {
                 "component": "sensor",
                 "state_topic": f"{base}/firmware_version/state",
-                "name": "Firmware Version",
-                "description": "Machine firmware version",
             },
             "software_version": {
                 "component": "sensor",
                 "state_topic": f"{base}/software_version/state",
-                "name": "Software Version",
-                "description": "Software version of add-on",
             },
             "voltage": {
                 "component": "sensor",
                 "state_topic": f"{base}/voltage/state",
-                "name": "Voltage",
-                "description": "Current power supply voltage",
             },
             "sounds_enabled": {
                 "component": "switch",
                 "state_topic": f"{base}/sounds_enabled/state",
                 "command_topic": f"{self.command_prefix}/enable_sounds",
-                "name": "Sounds Enabled",
                 "payload_on": "true",
                 "payload_off": "false",
-                "description": "Toggle machine notification sounds",
             },
             "preheat_countdown": {
                 "component": "sensor",
                 "state_topic": f"{base}/preheat_countdown/state",
-                "name": "Preheat Timer",
-                "description": "Countdown timer for preheating",
-                "unit_of_measurement": "s",
-                "icon": "mdi:timer",
-                "suggest_precision": "0",
             },
-            # Brightness: read-only sensor, control is via set_brightness command
             "brightness": {
                 "component": "sensor",
                 "state_topic": f"{base}/brightness/state",
-                "name": "Brightness",
-                "description": "Display brightness level",
             },
         }
         # fmt: on
@@ -658,63 +610,42 @@ class MeticulousAddon:
         """Return mapping of available commands for Home Assistant discovery."""
         return {
             "start_shot": {
-                "name": "Start Shot",
-                "description": "Begin brew execution (after profile is loaded and preheated)",
-                "icon": "mdi:play-circle",
                 "command_suffix": "start_shot",
+                "type": "button",
             },
             "stop_shot": {
-                "name": "Stop Shot",
-                "description": "Stop the plunger immediately mid-shot",
-                "icon": "mdi:stop",
                 "command_suffix": "stop_shot",
+                "type": "button",
             },
             "continue_shot": {
-                "name": "Continue Shot",
-                "description": "Resume a paused shot",
-                "icon": "mdi:play-pause",
                 "command_suffix": "continue_shot",
+                "type": "button",
             },
             "abort_shot": {
-                "name": "Abort Shot",
-                "description": "Abort the current profile and retract plunger",
-                "icon": "mdi:cancel",
                 "command_suffix": "abort_shot",
+                "type": "button",
             },
             "run_profile": {
-                "name": "Run Profile",
-                "description": "Load and preheat the currently selected profile",
-                "icon": "mdi:play",
                 "command_suffix": "run_profile",
+                "type": "button",
             },
             "preheat": {
-                "name": "Preheat",
-                "description": "Preheat water in chamber to target temperature",
-                "icon": "mdi:fire",
                 "command_suffix": "preheat",
+                "type": "button",
             },
             "tare_scale": {
-                "name": "Tare Scale",
-                "description": "Zero the scale",
-                "icon": "mdi:scale",
                 "command_suffix": "tare_scale",
+                "type": "button",
             },
             "home_plunger": {
-                "name": "Home Plunger",
-                "description": "Reset plunger to home position",
-                "icon": "mdi:home",
                 "command_suffix": "home_plunger",
+                "type": "button",
             },
             "purge": {
-                "name": "Purge",
-                "description": "Flush water through group head",
-                "icon": "mdi:water-check",
                 "command_suffix": "purge",
+                "type": "button",
             },
             "set_brightness": {
-                "name": "Set Brightness",
-                "description": "Adjust display brightness",
-                "icon": "mdi:brightness-6",
                 "command_suffix": "set_brightness",
                 "type": "number",
                 "min": 0,
@@ -741,50 +672,6 @@ class MeticulousAddon:
         if hw_version:
             device["hw_version"] = hw_version
         return device
-
-    async def _mqtt_clear_old_discovery(self) -> None:
-        """Clear all old discovery configs by publishing empty payloads with retain flag.
-
-        This ensures clean slate for Home Assistant discovery on each startup,
-        removing any stale entities from previous versions or configurations.
-        """
-        if not (self.mqtt_enabled and self.mqtt_client):
-            logger.debug("Skipping discovery clear: mqtt not ready")
-            return
-
-        logger.info("Clearing old Home Assistant discovery configs")
-
-        # List of all components we publish discovery for
-        components = ["sensor", "binary_sensor", "switch", "number", "button", "select"]
-
-        try:
-            for component in components:
-                # We need to clear specific entity IDs we know about
-                # Build list from sensor mapping and commands
-                entity_ids = set()
-
-                # Add sensor entity IDs
-                for key in self._mqtt_sensor_mapping().keys():
-                    if key != "brightness":  # Skip brightness - it's only a number control
-                        entity_ids.add(f"{self.slug}_{key}")
-
-                # Add command entity IDs
-                for key in self._mqtt_command_mapping().keys():
-                    entity_ids.add(f"{self.slug}_{key}")
-
-                # Add deprecated entity IDs that should be cleaned up
-                entity_ids.add(f"{self.slug}_select_profile")  # Removed in v0.29.1
-
-                # Publish empty payload (retain=True) to clear each config
-                for entity_id in entity_ids:
-                    config_topic = f"{self.discovery_prefix}/{component}/{entity_id}/config"
-                    self.mqtt_client.publish(config_topic, "", qos=1, retain=True)
-                    logger.debug(f"Cleared: {config_topic}")
-                    await asyncio.sleep(0.01)  # Small yield to event loop
-
-            logger.debug("Discovery configs cleared")
-        except Exception as e:
-            logger.error(f"Error clearing old discovery: {e}", exc_info=True)
 
     async def _mqtt_cleanup_old_entity_versions(self) -> None:
         """Clean up old entities by discovering MQTT discovery configs.
@@ -893,6 +780,61 @@ class MeticulousAddon:
         try:
             # Publish sensor discoveries
             sample_payload_logged = False
+
+            # Sensor display metadata (built dynamically, not in mapping)
+            sensor_names = {
+                "connected": "Meticulous Connected",
+                "state": "Meticulous State",
+                "brewing": "Meticulous Brewing",
+                "boiler_temperature": "Boiler Temperature",
+                "brew_head_temperature": "Brew Head Temperature",
+                "external_temp_1": "External Temperature 1",
+                "external_temp_2": "External Temperature 2",
+                "pressure": "Pressure",
+                "flow_rate": "Flow Rate",
+                "shot_timer": "Shot Timer",
+                "shot_weight": "Shot Weight",
+                "total_shots": "Total Shots",
+                "last_shot_name": "Last Shot Name",
+                "last_shot_rating": "Last Shot Rating",
+                "last_shot_time": "Last Shot Time",
+                "profile_author": "Profile Author",
+                "target_temperature": "Target Temperature",
+                "target_weight": "Target Weight",
+                "firmware_version": "Firmware Version",
+                "software_version": "Software Version",
+                "voltage": "Voltage",
+                "sounds_enabled": "Sounds Enabled",
+                "preheat_countdown": "Preheat Timer",
+                "brightness": "Brightness",
+            }
+            sensor_descriptions = {
+                "connected": "Whether the machine is connected",
+                "state": "Current machine state",
+                "brewing": "Whether a shot is currently brewing",
+                "boiler_temperature": "Current boiler water temperature",
+                "brew_head_temperature": "Current brew head temperature",
+                "external_temp_1": "External temperature sensor 1",
+                "external_temp_2": "External temperature sensor 2",
+                "pressure": "Pressure in portafilter during extraction",
+                "flow_rate": "Current flow rate during extraction",
+                "shot_timer": "Time elapsed in current shot",
+                "shot_weight": "Current weight of espresso in cup",
+                "total_shots": "Total number of shots pulled",
+                "last_shot_name": "Name of the last shot",
+                "last_shot_rating": "User rating of last shot",
+                "last_shot_time": "Timestamp of last shot",
+                "profile_author": "Author of active espresso profile",
+                "target_temperature": "Target temperature from profile",
+                "target_weight": "Target espresso weight from profile",
+                "firmware_version": "Machine firmware version",
+                "software_version": "Software version of add-on",
+                "voltage": "Current power supply voltage",
+                "sounds_enabled": "Toggle machine notification sounds",
+                "preheat_countdown": "Countdown timer for preheating",
+                "brightness": "Display brightness level",
+            }
+
             for key, m in self._mqtt_sensor_mapping().items():
                 if key == "active_profile":
                     continue
@@ -904,7 +846,7 @@ class MeticulousAddon:
                 object_id = f"{self.slug}_{key}"
                 config_topic = f"{self.discovery_prefix}/{component}/{object_id}/config"
                 payload: Dict[str, Any] = {
-                    "name": m["name"],
+                    "name": sensor_names.get(key, key),
                     "unique_id": object_id,
                     "state_topic": m["state_topic"],
                     "availability_topic": self.availability_topic,
@@ -966,7 +908,7 @@ class MeticulousAddon:
                 elif key == "preheat_countdown":
                     payload["unit_of_measurement"] = "s"
                     payload["icon"] = "mdi:timer"
-                    payload["suggest_precision"] = 0
+                    payload["suggested_display_precision"] = 0
                 elif key in ("shot_weight", "target_weight"):
                     payload["unit_of_measurement"] = "g"
                     payload["icon"] = "mdi:scale-bathroom"
@@ -988,9 +930,9 @@ class MeticulousAddon:
                 elif key in ("firmware_version", "software_version"):
                     payload["icon"] = "mdi:content-save"
 
-                # Add entity description from mapping
-                if "description" in m:
-                    payload["entity_description"] = m["description"]
+                # Add entity description from built metadata
+                if key in sensor_descriptions:
+                    payload["entity_description"] = sensor_descriptions[key]
 
                 # Log first sensor payload as example
                 if not sample_payload_logged:
@@ -1017,23 +959,65 @@ class MeticulousAddon:
                 object_id = f"{self.slug}_{key}"
                 cmd_type = cmd.get("type", "button")
 
+                # Compute command metadata
+                command_names = {
+                    "start_shot": "Start Shot",
+                    "stop_shot": "Stop Shot",
+                    "continue_shot": "Continue Shot",
+                    "abort_shot": "Abort Shot",
+                    "run_profile": "Run Profile",
+                    "preheat": "Preheat",
+                    "tare_scale": "Tare Scale",
+                    "home_plunger": "Home Plunger",
+                    "purge": "Purge",
+                    "set_brightness": "Brightness",
+                }
+                command_descriptions = {
+                    "start_shot": "Begin brew execution (after profile is loaded and preheated)",
+                    "stop_shot": "Stop the plunger immediately mid-shot",
+                    "continue_shot": "Resume a paused shot",
+                    "abort_shot": "Abort the current profile and retract plunger",
+                    "run_profile": "Load and preheat the currently selected profile",
+                    "preheat": "Preheat water in chamber to target temperature",
+                    "tare_scale": "Zero the scale",
+                    "home_plunger": "Reset plunger to home position",
+                    "purge": "Flush water through group head",
+                    "set_brightness": "Adjust display brightness",
+                }
+                command_icons = {
+                    "start_shot": "mdi:play-circle",
+                    "stop_shot": "mdi:stop",
+                    "continue_shot": "mdi:play-pause",
+                    "abort_shot": "mdi:cancel",
+                    "run_profile": "mdi:play",
+                    "preheat": "mdi:fire",
+                    "tare_scale": "mdi:scale",
+                    "home_plunger": "mdi:home",
+                    "purge": "mdi:water-check",
+                    "set_brightness": "mdi:brightness-6",
+                }
+
+                cmd_name = command_names.get(key, key)
+                cmd_description = command_descriptions.get(key)
+                cmd_icon = command_icons.get(key)
+
                 if key == "set_brightness":
                     component = "number"
                     config_topic = f"{self.discovery_prefix}/{component}/{object_id}/config"
                     payload: Dict[str, Any] = {
-                        "name": "Brightness",
+                        "name": cmd_name,
                         "unique_id": object_id,
                         "state_topic": f"{self.state_prefix}/brightness/state",
                         "command_topic": f"{self.command_prefix}/set_brightness",
                         "availability_topic": self.availability_topic,
                         "device": device,
-                        "icon": cmd["icon"],
+                        "icon": cmd_icon,
                         "min": cmd.get("min", 0),
                         "max": cmd.get("max", 100),
                         "unit_of_measurement": "%",
                     }
-                    if "description" in cmd:
-                        payload["entity_description"] = cmd["description"]
+                    if cmd_description:
+                        payload["entity_description"] = cmd_description
                     # Log first command payload as example
                     if not sample_cmd_logged:
                         logger.debug(
@@ -1056,47 +1040,47 @@ class MeticulousAddon:
                     # Number commands need a state_topic to show current value
                     state_topic = f"{self.state_prefix}/{cmd['command_suffix']}/state"
                     payload: Dict[str, Any] = {
-                        "name": cmd["name"],
+                        "name": cmd_name,
                         "unique_id": object_id,
                         "state_topic": state_topic,
                         "command_topic": f"{self.command_prefix}/{cmd['command_suffix']}",
                         "availability_topic": self.availability_topic,
                         "device": device,
-                        "icon": cmd["icon"],
+                        "icon": cmd_icon,
                         "min": cmd.get("min", 0),
                         "max": cmd.get("max", 100),
                     }
-                    if "description" in cmd:
-                        payload["entity_description"] = cmd["description"]
+                    if cmd_description:
+                        payload["entity_description"] = cmd_description
                 elif cmd_type == "switch":
                     component = "switch"
                     config_topic = f"{self.discovery_prefix}/{component}/{object_id}/config"
                     payload: Dict[str, Any] = {
-                        "name": cmd["name"],
+                        "name": cmd_name,
                         "unique_id": object_id,
                         "command_topic": f"{self.command_prefix}/{cmd['command_suffix']}",
                         "availability_topic": self.availability_topic,
                         "device": device,
-                        "icon": cmd["icon"],
+                        "icon": cmd_icon,
                         "payload_on": "true",
                         "payload_off": "false",
                     }
-                    if "description" in cmd:
-                        payload["entity_description"] = cmd["description"]
+                    if cmd_description:
+                        payload["entity_description"] = cmd_description
                 else:  # button
                     component = "button"
                     config_topic = f"{self.discovery_prefix}/{component}/{object_id}/config"
                     payload: Dict[str, Any] = {
-                        "name": cmd["name"],
+                        "name": cmd_name,
                         "unique_id": object_id,
                         "command_topic": f"{self.command_prefix}/{cmd['command_suffix']}",
                         "availability_topic": self.availability_topic,
                         "device": device,
-                        "icon": cmd["icon"],
+                        "icon": cmd_icon,
                         "payload_press": "1",
                     }
-                    if "description" in cmd:
-                        payload["entity_description"] = cmd["description"]
+                    if cmd_description:
+                        payload["entity_description"] = cmd_description
 
                 result = self.mqtt_client.publish(
                     config_topic, jsonlib.dumps(payload), qos=1, retain=True
@@ -1710,7 +1694,7 @@ class MeticulousAddon:
 
         try:
             topic = f"{self.state_prefix}/preheat_countdown/state"
-            self.mqtt_client.publish(topic, str(round(countdown_seconds, 2)), qos=1, retain=True)
+            self.mqtt_client.publish(topic, str(countdown_seconds), qos=1, retain=True)
             logger.debug(f"Published preheat countdown to MQTT: {countdown_seconds}s")
         except Exception as e:
             logger.error(f"Error publishing preheat countdown: {e}")
@@ -2225,10 +2209,7 @@ class MeticulousAddon:
                         # Wait for connection to fully handshake with broker
                         logger.debug("Waiting 1s for MQTT handshake before discovery publish...")
                         await asyncio.sleep(1.0)
-                        logger.debug(
-                            "Handshake complete, clearing old discovery and publishing new..."
-                        )
-                        await self._mqtt_clear_old_discovery()
+                        logger.debug("Handshake complete, publishing discovery...")
 
                         # Run version migration cleanup once after MQTT connects
                         if not version_migration_done:

@@ -2,6 +2,11 @@
 
 All notable user-facing changes to this add-on are documented here.
 
+## [0.30.8] - 2026-02-04
+
+### Fixes
+- **Preheat countdown precision** — Countdown timer now displays whole seconds without decimals (e.g., "45s" instead of "45.23s")
+
 ## [0.30.7] - 2026-02-04
 
 ### Fixes
