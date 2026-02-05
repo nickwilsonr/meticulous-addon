@@ -2,7 +2,7 @@
 
 All notable user-facing changes to this add-on are documented here.
 
-## [0.30.5] - 2026-02-04
+## [0.30.6] - 2026-02-04
 
 ### Fixes
 - **Entity cleanup on upgrade** — Old sensors and entities from previous versions are now properly removed from Home Assistant during addon updates

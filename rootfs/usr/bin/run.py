@@ -831,8 +831,8 @@ class MeticulousAddon:
             logger.info(f"Discovering entities with pattern: {discovery_pattern}")
             self.mqtt_client.subscribe(discovery_pattern, qos=1)
 
-            # Wait for broker to send all retained messages
-            await asyncio.sleep(0.5)
+            # Wait for broker to send all retained messages (need sufficient time)
+            await asyncio.sleep(2.0)
 
             # Unsubscribe from discovery
             self.mqtt_client.unsubscribe(discovery_pattern)
