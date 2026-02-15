@@ -150,6 +150,7 @@ class MeticulousAddon:
         # Shot timer reset tracking: reset timer to 0 when state returns to Idle
         self._last_shot_timer_value = 0.0
         self._was_in_idle = True  # Start true (machine initial state is idle)
+        self._startup_state_seen = False
 
         # Home Assistant session
         self.ha_session: Optional[aiohttp.ClientSession] = None
@@ -1784,14 +1785,25 @@ class MeticulousAddon:
             brewing = coarse_state != "idle" and is_extracting
 
             # Extract shot timer value
-            shot_timer = status.get("profile_time", 0) / 1000.0 if status.get("profile_time") else 0
+            shot_timer_ms = status.get("profile_time")
+            shot_timer = shot_timer_ms / 1000.0 if shot_timer_ms else 0
 
             # FEATURE: Reset shot timer to 0 when state returns to Idle
-            # If transitioning FROM non-idle TO idle, and timer is still > 0, reset it
+            # If transitioning FROM non-idle TO idle, and timer is still > 0
+            # or it's startup, reset it
             is_now_idle = self.current_state == "Idle"
+            if not self._startup_state_seen:
+                self._startup_state_seen = True
+                if is_now_idle:
+                    if shot_timer > 0:
+                        logger.info(
+                            "Initial state is Idle: resetting shot timer "
+                            f"from {shot_timer:.1f}s to 0"
+                        )
+                    shot_timer = 0.0
             if is_now_idle and not self._was_in_idle and shot_timer > 0:
                 logger.info(
-                    f"State returned to Idle: resetting shot timer from {shot_timer:.1f}s to 0"
+                    "State returned to Idle: resetting shot timer " f"from {shot_timer:.1f}s to 0"
                 )
                 shot_timer = 0.0
             self._was_in_idle = is_now_idle
