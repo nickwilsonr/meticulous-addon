@@ -220,6 +220,14 @@ def handle_command_select_profile(addon: "MeticulousAddon", profile_name: str):
         addon.api.send_profile_hover(payload)
         # send_profile_hover always returns None (not error on failure)
         logger.info(f"select_profile: Successfully highlighted profile ({profile_name})")
+
+        # Publish state back so HA select entity stays in sync.
+        # Without this, HA's stale state prevents re-selecting the previous profile.
+        addon.current_profile = profile_name
+        if addon.mqtt_client:
+            state_topic = f"{addon.state_prefix}/active_profile/state"
+            addon.mqtt_client.publish(state_topic, profile_name, qos=1, retain=True)
+            logger.debug(f"Published active_profile state: {profile_name}")
     except Exception as e:
         logger.error(f"select_profile error: {e}", exc_info=True)
 
