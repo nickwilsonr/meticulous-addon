@@ -352,10 +352,16 @@ class MeticulousAddon:
                 self.api.connect_to_socket()
                 self.socket_connected = True
                 self.api_connected = True
+                # Register profileHover listener directly on the Socket.IO client.
+                # pyMeticulous doesn't expose this event via ApiOptions, but the
+                # machine broadcasts it when any client (or the device UI) focuses
+                # a profile.
+                self.api.sio.on("profileHover", self._handle_profile_hover_event)
                 logger.debug("Socket.IO connected - real-time updates enabled")
                 logger.debug(
                     "Event handlers registered: onStatus, onTemperatureSensors, "
-                    "onProfileChange, onNotification, onButton, onSettingsChange"
+                    "onProfileChange, onNotification, onButton, onSettingsChange, "
+                    "profileHover"
                 )
             except Exception as e:
                 self.socket_connected = False
@@ -1862,6 +1868,41 @@ class MeticulousAddon:
 
         except Exception as e:
             logger.error(f"Error handling profile event: {e}", exc_info=True)
+
+    def _handle_profile_hover_event(self, data: Any):
+        """Handle profileHover events from Socket.IO.
+
+        Fired when a profile is focused/selected on the machine or from another
+        client (e.g. iOS app). Updates the HA active profile select entity.
+        """
+        try:
+            if isinstance(data, dict):
+                profile_id = data.get("id")
+            else:
+                profile_id = getattr(data, "id", None)
+
+            if not profile_id:
+                logger.debug(f"profileHover event with no id: {data}")
+                return
+
+            profile_name = self.available_profiles.get(profile_id)
+            if not profile_name:
+                logger.debug(f"profileHover for unknown id: {profile_id}")
+                return
+
+            if profile_name == self.current_profile:
+                return
+
+            logger.info(f"Profile hover: {self.current_profile} → {profile_name}")
+            self.current_profile = profile_name
+
+            if self.mqtt_client:
+                state_topic = f"{self.state_prefix}/active_profile/state"
+                self.mqtt_client.publish(state_topic, profile_name, qos=1, retain=True)
+                logger.debug(f"Published active_profile state: {profile_name}")
+
+        except Exception as e:
+            logger.error(f"Error handling profileHover event: {e}", exc_info=True)
 
     def _handle_notification_event(self, notification: dict):
         """Handle machine notifications from Socket.IO."""
