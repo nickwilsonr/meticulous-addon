@@ -2,6 +2,15 @@
 
 All notable user-facing changes to this add-on are documented here.
 
+## [0.31.0] - 2026-02-15
+
+### Improvements
+- **Profile selection sync** (by man on street) — Home Assistant profile dropdown now stays in sync when you change profiles via the machine's iOS app or other Socket.IO clients
+- **Shot timer cleanup** — Timer automatically resets to 0 when the machine returns to Idle, preventing stale values from the previous shot
+
+### Fixes
+- **Profile state publishing** (by man on street) — Home Assistant now correctly receives profile state updates when you change profiles
+
 ## [0.30.8] - 2026-02-04
 
 ### Fixes
