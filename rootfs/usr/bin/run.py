@@ -147,6 +147,10 @@ class MeticulousAddon:
         self.available_profiles = {}  # Map of profile_id -> profile_name
         self.device_info = None
 
+        # Shot timer reset tracking: reset timer to 0 when state returns to Idle
+        self._last_shot_timer_value = 0.0
+        self._was_in_idle = True  # Start true (machine initial state is idle)
+
         # Home Assistant session
         self.ha_session: Optional[aiohttp.ClientSession] = None
 
@@ -1779,12 +1783,24 @@ class MeticulousAddon:
             # True only when extracting (not idle AND actively extracting)
             brewing = coarse_state != "idle" and is_extracting
 
+            # Extract shot timer value
+            shot_timer = status.get("profile_time", 0) / 1000.0 if status.get("profile_time") else 0
+
+            # FEATURE: Reset shot timer to 0 when state returns to Idle
+            # If transitioning FROM non-idle TO idle, and timer is still > 0, reset it
+            is_now_idle = self.current_state == "Idle"
+            if is_now_idle and not self._was_in_idle and shot_timer > 0:
+                logger.info(
+                    f"State returned to Idle: resetting shot timer from {shot_timer:.1f}s to 0"
+                )
+                shot_timer = 0.0
+            self._was_in_idle = is_now_idle
+            self._last_shot_timer_value = shot_timer
+
             sensor_data = {
                 "state": self.current_state,
                 "brewing": brewing,
-                "shot_timer": (
-                    status.get("profile_time", 0) / 1000.0 if status.get("profile_time") else 0
-                ),
+                "shot_timer": shot_timer,
                 "elapsed_time": status.get("time", 0) / 1000.0 if status.get("time") else 0,
                 "pressure": pressure,
                 "flow_rate": flow,
