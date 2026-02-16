@@ -2,6 +2,11 @@
 
 All notable user-facing changes to this add-on are documented here.
 
+## [0.31.7] - 2026-02-16
+
+### Improvements
+- Shot statistics (shot count, last shot name, and timestamp) now update immediately when a shot completes, instead of waiting for the periodic refresh cycle
+
 ## [0.31.6] - 2026-02-15
 
 ### Fixes

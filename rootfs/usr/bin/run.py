@@ -1790,6 +1790,13 @@ class MeticulousAddon:
                     # Timer changed from stale value, now we have real data
                     self._stale_shot_timer_value = None
 
+            # Detect transition from non-idle to idle (shot completed)
+            if self._was_in_idle is False and is_now_idle:
+                # Shot just finished, update statistics (shot count, last shot info, timestamp)
+                if self.loop and self.api:
+                    asyncio.run_coroutine_threadsafe(self.update_statistics(), self.loop)
+                    logger.debug("Shot finished, triggering statistics update")
+
             self._was_in_idle = is_now_idle
             self._last_shot_timer_value = shot_timer
 
