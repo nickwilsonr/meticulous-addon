@@ -1769,13 +1769,13 @@ class MeticulousAddon:
 
             # FEATURE: Ignore stale shot timer value
             # Machine keeps old profile_time cached from previous shot.
-            # On first idle event (startup or after shot completes), capture that stale value.
-            # Then: during idle force timer to 0, and during shot skip stale value until
-            # timer increments.
+            # On first idle event (startup or after shot completes), capture that
+            # stale value. Then: during idle force timer to 0, and during shot skip
+            # stale value until timer increments.
             is_now_idle = self.current_state == "Idle"
             if is_now_idle:
-                # During idle: capture stale value on first idle (startup), then force timer to 0
-                if self._stale_shot_timer_value is None and shot_timer > 0:
+                # During idle: capture stale value and force timer to 0
+                if shot_timer > 0:
                     self._stale_shot_timer_value = shot_timer
                     logger.debug(f"Captured stale shot timer value: {shot_timer}s")
                 shot_timer = 0.0
