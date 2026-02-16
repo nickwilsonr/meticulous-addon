@@ -147,10 +147,10 @@ class MeticulousAddon:
         self.available_profiles = {}  # Map of profile_id -> profile_name
         self.device_info = None
 
-        # Shot timer reset tracking: reset timer to 0 when state returns to Idle
+        # Shot timer stale value tracking: ignore shot timer until it changes from stale value
         self._last_shot_timer_value = 0.0
         self._was_in_idle = True  # Start true (machine initial state is idle)
-        self._startup_status_seen = False
+        self._stale_shot_timer_value = None  # Track stale timer value to skip it when shot starts
 
         # Home Assistant session
         self.ha_session: Optional[aiohttp.ClientSession] = None
@@ -1767,27 +1767,29 @@ class MeticulousAddon:
             shot_timer_ms = status.get("profile_time")
             shot_timer = shot_timer_ms / 1000.0 if shot_timer_ms else 0
 
-            # FEATURE: Reset shot timer to 0 when state returns to Idle
-            # If transitioning FROM non-idle TO idle, and timer is still > 0
-            # or it's startup, reset it
+            # FEATURE: Ignore stale shot timer value
+            # Machine keeps old profile_time cached from previous shot.
+            # On first idle event (startup or after shot completes), capture that
+            # stale value. Then: during idle force timer to 0, and during shot skip
+            # stale value until timer increments.
             is_now_idle = self.current_state == "Idle"
-            if not self._startup_status_seen:
-                self._startup_status_seen = True
-                if is_now_idle and shot_timer > 0:
-                    logger.info(
-                        "Initial state is Idle: resetting shot timer "
-                        f"from {shot_timer:.1f}s to 0"
-                    )
-                    shot_timer = 0.0
-                    # Clear throttle entry to force publish of reset value
-                    self.last_field_values["shot_timer"] = None
-            if is_now_idle and not self._was_in_idle and shot_timer > 0:
-                logger.info(
-                    "State returned to Idle: resetting shot timer " f"from {shot_timer:.1f}s to 0"
-                )
+            if is_now_idle:
+                # During idle: capture stale value and force timer to 0
+                if shot_timer > 0:
+                    self._stale_shot_timer_value = shot_timer
+                    logger.debug(f"Captured stale shot timer value: {shot_timer}s")
                 shot_timer = 0.0
                 # Clear throttle entry to force publish of reset value
                 self.last_field_values["shot_timer"] = None
+            elif self._stale_shot_timer_value is not None:
+                # During shot: skip stale value until it changes
+                if shot_timer == self._stale_shot_timer_value:
+                    # Still stale, keep using previous value
+                    shot_timer = self._last_shot_timer_value
+                else:
+                    # Timer changed from stale value, now we have real data
+                    self._stale_shot_timer_value = None
+
             self._was_in_idle = is_now_idle
             self._last_shot_timer_value = shot_timer
 
