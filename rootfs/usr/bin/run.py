@@ -276,8 +276,8 @@ class MeticulousAddon:
             h.setLevel(level)
         logger.setLevel(level)
 
-    async def connect_to_machine(self) -> bool:
-        """Connect to the Meticulous Espresso machine and setup Socket.IO."""
+    async def connect_api(self) -> bool:
+        """Connect to REST API and fetch device info (Socket.IO separate)."""
         if not self.machine_ip:
             logger.error(
                 "No machine IP configured. Set 'machine_ip' in the add-on options "
@@ -285,7 +285,7 @@ class MeticulousAddon:
             )
             return False
 
-        logger.info(f"Connecting to Meticulous machine at {self.machine_ip}")
+        logger.info(f"Connecting to Meticulous machine REST API at {self.machine_ip}")
 
         try:
             # Build base URL
@@ -318,7 +318,7 @@ class MeticulousAddon:
             logger.debug(f"  - onMachineInfo: {self._handle_machine_info_event}")
             logger.debug(f"  - onHeaterStatus: {self._handle_heater_status_event}")
 
-            # Initialize API
+            # Initialize API (REST only, Socket.IO will connect separately)
             self.api = Api(base_url=base_url, options=options)  # type: ignore[assignment]
 
             # Test connection by fetching device info
@@ -346,47 +346,51 @@ class MeticulousAddon:
                 device_info = PlaceholderDeviceInfo()
 
             self.device_info = device_info
+            self.api_connected = True
             logger.info(f"Connected to {device_info.name} (Serial: {device_info.serial})")
             logger.info(
                 f"Firmware: {device_info.firmware}, Software: {device_info.software_version}"
             )
 
-            # Connect Socket.IO for real-time updates
-            try:
-                logger.info("Connecting to Socket.IO...")
-                self.api.connect_to_socket()
-                self.socket_connected = True
-                self.api_connected = True
-                # Register profileHover listener directly on the Socket.IO client.
-                # pyMeticulous doesn't expose this event via ApiOptions, but the
-                # machine broadcasts it when any client (or the device UI) focuses
-                # a profile.
-                self.api.sio.on("profileHover", self._handle_profile_hover_event)
-                logger.debug("Socket.IO connected - real-time updates enabled")
-                logger.debug(
-                    "Event handlers registered: onStatus, onTemperatureSensors, "
-                    "onProfileChange, onNotification, onButton, onSettingsChange, "
-                    "profileHover"
-                )
-            except Exception as e:
-                self.socket_connected = False
-                self.api_connected = True  # REST works, socket failed
-                logger.warning(f"Socket.IO connection failed: {e}")
-                logger.warning("Continuing with polling mode only")
-
-            # Publish device info to Home Assistant
-            await self.publish_device_info()
-            await self.publish_connectivity(True)
-
-            # Fetch available profiles before MQTT discovery
+            # Fetch available profiles (needed for discovery, doesn't require MQTT)
             await self.fetch_available_profiles()
-
-            # MQTT connection will be handled in periodic_updates with proper retry logic
 
             return True
 
         except Exception as e:
-            logger.error(f"Error connecting to machine: {e}", exc_info=True)
+            logger.error(f"Error connecting to machine API: {e}", exc_info=True)
+            return False
+
+    async def connect_socket(self) -> bool:
+        """Connect Socket.IO after MQTT is ready."""
+        if not self.api:
+            logger.error("Cannot connect Socket.IO: API not initialized")
+            return False
+
+        try:
+            logger.info("Connecting to Socket.IO...")
+            self.api.connect_to_socket()
+            self.socket_connected = True
+            # Register profileHover listener directly on the Socket.IO client.
+            # pyMeticulous doesn't expose this event via ApiOptions, but the
+            # machine broadcasts it when any client (or the device UI) focuses
+            # a profile.
+            self.api.sio.on("profileHover", self._handle_profile_hover_event)
+            logger.debug("Socket.IO connected - real-time updates enabled")
+            logger.debug(
+                "Event handlers registered: onStatus, onTemperatureSensors, "
+                "onProfileChange, onNotification, onButton, onSettingsChange, "
+                "profileHover"
+            )
+
+            # Publish connectivity status after Socket.IO connects
+            await self.publish_connectivity(True)
+
+            return True
+        except Exception as e:
+            self.socket_connected = False
+            logger.warning(f"Socket.IO connection failed: {e}")
+            logger.warning("Continuing with polling mode only")
             await self.publish_connectivity(False)
             return False
 
@@ -1493,11 +1497,6 @@ class MeticulousAddon:
                     # Set flag to publish discovery from main event loop (thread-safe)
                     logger.debug("Setting mqtt_discovery_pending=True")
                     self.mqtt_discovery_pending = True
-                    # Publish initial state on successful connection
-                    if self.loop:
-                        asyncio.run_coroutine_threadsafe(
-                            self._mqtt_publish_initial_state(), self.loop
-                        )
                     self.mqtt_last_failed = False  # Reset failure flag on success
                 else:
                     error_msg = self._mqtt_error_string(rc)
@@ -1527,23 +1526,6 @@ class MeticulousAddon:
                 self.mqtt_last_failed = True
             else:
                 logger.debug(f"MQTT connection retry failed: {e}")
-
-    async def publish_device_info(self):
-        """Publish device information sensors to Home Assistant."""
-        if not self.device_info:
-            return
-
-        device_data = {
-            "firmware_version": self.device_info.firmware,
-            "software_version": self.device_info.software_version,
-            "model": getattr(self.device_info, "model", None),
-            "serial": self.device_info.serial,
-            "name": self.device_info.name,
-            "voltage": getattr(self.device_info, "mainVoltage", None),
-        }
-
-        await self.publish_to_homeassistant(device_data)
-        logger.info("Published device info to Home Assistant")
 
     # =========================================================================
     # Throttling Helper
@@ -2375,22 +2357,14 @@ class MeticulousAddon:
         self.ha_session = aiohttp.ClientSession()
 
         try:
-            # Connect to machine
-            if not await self.connect_to_machine():
-                # Exponential backoff on initial connect
-                attempt = 1
-                while self.running and not await self.connect_to_machine():
-                    delay = self._compute_backoff(attempt)
-                    logger.error(
-                        "Failed to connect to machine (attempt %d). Retrying in %.1fs...",
-                        attempt,
-                        delay,
-                    )
-                    await asyncio.sleep(delay)
-                    attempt += 1
+            # 1. Connect to REST API first (get device_info needed for later)
+            if not await self.connect_api():
+                logger.error("Failed to connect to machine API. Aborting startup.")
+                return
 
-            # Attempt MQTT connection immediately before Socket.IO
+            # 2. Connect to MQTT before Socket.IO
             # This ensures MQTT is ready when Socket.IO fires initial status events
+            # and device_info is available for discovery
             if self.mqtt_enabled:
                 logger.info("Connecting to MQTT before Socket.IO...")
                 self._mqtt_connect()
@@ -2409,9 +2383,15 @@ class MeticulousAddon:
                     await asyncio.sleep(0.1)
 
                 if self.mqtt_client and self.mqtt_client.is_connected():
-                    logger.info("MQTT connection confirmed, proceeding with Socket.IO")
+                    logger.info("MQTT connection confirmed")
+                    # Collect and publish T0 (initial state) data
+                    await self._mqtt_publish_initial_state()
 
-            # Start background tasks
+            # 3. Connect Socket.IO last (after MQTT is ready and T0 published)
+            if not await self.connect_socket():
+                logger.warning("Socket.IO connection failed on startup, will retry in background")
+
+            # 4. Start background tasks (periodic_updates, maintain_socket_connection)
             tasks = [
                 asyncio.create_task(self.maintain_socket_connection()),
                 asyncio.create_task(self.periodic_updates()),
