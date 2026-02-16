@@ -2395,6 +2395,22 @@ class MeticulousAddon:
                 logger.info("Connecting to MQTT before Socket.IO...")
                 self._mqtt_connect()
 
+                # Wait for MQTT to actually connect (up to 30 seconds)
+                mqtt_wait_timeout = 30
+                mqtt_wait_start = asyncio.get_event_loop().time()
+                while self.running and (
+                    not self.mqtt_client or not self.mqtt_client.is_connected()
+                ):
+                    if asyncio.get_event_loop().time() - mqtt_wait_start > mqtt_wait_timeout:
+                        logger.warning(
+                            "MQTT connection timeout after 30s, proceeding with Socket.IO anyway"
+                        )
+                        break
+                    await asyncio.sleep(0.1)
+
+                if self.mqtt_client and self.mqtt_client.is_connected():
+                    logger.info("MQTT connection confirmed, proceeding with Socket.IO")
+
             # Start background tasks
             tasks = [
                 asyncio.create_task(self.maintain_socket_connection()),
