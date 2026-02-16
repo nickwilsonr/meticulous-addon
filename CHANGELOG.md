@@ -2,6 +2,11 @@
 
 All notable user-facing changes to this add-on are documented here.
 
+## [0.31.6] - 2026-02-15
+
+### Fixes
+- Shot timer no longer displays stale value from previous shot — When idle, the timer now correctly shows 0 instead of lingering elapsed time from the last shot, and smoothly transitions to real values when a new shot starts
+
 ## [0.31.5] - 2026-02-15
 
 ### Fixes
