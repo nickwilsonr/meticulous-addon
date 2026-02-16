@@ -2238,12 +2238,12 @@ class MeticulousAddon:
     async def periodic_updates(self):
         """Perform periodic polling updates for non-real-time data.
 
-        All sensors are heartbeat-refreshed from the API every refresh_rate_minutes (default: 5).
+        Stale data (profile, settings, statistics) is refreshed every stale_data_refresh_interval
+        (default: 24 hours) to prevent state from becoming stale in Home Assistant.
         Discovery is checked frequently (every 0.5s) to minimize latency after MQTT connects.
+        Real-time sensors (state, pressure, flow, temperature, shot_timer)
+        come from Socket.IO events.
         """
-        # Initial delay (MQTT already connected upfront, so this can be short)
-        await asyncio.sleep(2)
-
         # Version migration: clean up old MQTT entities on first run after MQTT connects
         version_migration_done = False
 
