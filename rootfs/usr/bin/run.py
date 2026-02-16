@@ -1758,14 +1758,11 @@ class MeticulousAddon:
                 logger.debug(f"Machine status: {self.current_machine_status} → {coarse_state}")
                 self.current_machine_status = coarse_state
 
-            # Detect profile changes
-            loaded_profile = status.get("loaded_profile")
-            if loaded_profile and loaded_profile != self.current_profile:
-                logger.info(f"Profile changed: {self.current_profile} → {loaded_profile}")
-                self.current_profile = loaded_profile
-                # Trigger profile info update
-                if self.loop:
-                    asyncio.run_coroutine_threadsafe(self.update_profile_info(), self.loop)
+            # Note: status.loaded_profile reflects the last *run* profile, not the
+            # currently *focused* profile on the machine screen. Profile focus is
+            # driven by profileHover events and the select_profile command, so we
+            # intentionally do not use loaded_profile here to avoid overwriting
+            # the user's selection. See #24.
 
             # Extract sensor data
             sensors = status.get("sensors", {})
@@ -1817,7 +1814,8 @@ class MeticulousAddon:
                 "flow_rate": flow,
                 "shot_weight": weight,
                 "temperature": temperature,
-                "active_profile": status.get("loaded_profile", "None"),
+                # active_profile is intentionally omitted here — it is managed
+                # by profileHover events and select_profile commands. See #24.
             }
 
             # Add setpoints if available
