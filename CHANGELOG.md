@@ -5,8 +5,8 @@ All notable user-facing changes to this add-on are documented here.
 ## [0.31.3] - 2026-02-15
 
 ### Fixes
-
-- **Startup shot timer reset** — Timer now resets to 0 when the add-on starts and the machine reports Idle, so a stale value from the previous shot isn’t published until an actual shot runs
+- **Startup shot timer reset** — Timer now resets to 0 when the add-on starts and the machine reports Idle, so a stale value from the previous shot isn't published until an actual shot runs
+- **Profile dropdown stays in sync** (by man on street) — Profile selection no longer reverts in Home Assistant when you make a selection, fixing the behavior where the dropdown would jump back to the previously loaded profile
 
 ## [0.31.0] - 2026-02-15
 
