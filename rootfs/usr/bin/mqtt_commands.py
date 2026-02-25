@@ -228,6 +228,7 @@ def handle_command_select_profile(addon: "MeticulousAddon", profile_name: str):
             state_topic = f"{addon.state_prefix}/active_profile/state"
             addon.mqtt_client.publish(state_topic, profile_name, qos=1, retain=True)
             logger.debug(f"Published active_profile state: {profile_name}")
+            addon._resolve_and_publish_active_image()
     except Exception as e:
         logger.error(f"select_profile error: {e}", exc_info=True)
 

@@ -6,8 +6,9 @@ Integrate your Meticulous Espresso machine with Home Assistant for real-time mon
 
 - **Real-time brewing data**: Pressure, flow rate, weight, shot timer
 - **Temperature monitoring**: Boiler and brew head temperatures
-- **24 automatic sensors**: Machine status, profiles, statistics, device info, connectivity
+- **25 automatic sensors**: Machine status, profiles, statistics, device info, connectivity
 - **8 control commands**: Start/stop/continue brew, preheat, tare scale, load profiles, adjust brightness, toggle sounds
+- **Profile image entity**: Active profile image available as a native HA image entity for use in dashboards
 - **MQTT auto-discovery**: Entities appear automatically in Home Assistant
 - **Graceful reconnection**: Automatic recovery from network issues
 
@@ -91,7 +92,7 @@ MQTT credentials if required by your broker. These are automatically fetched fro
 
 Once connected, the add-on automatically creates entities in Home Assistant:
 
-### Sensors (24 total)
+### Sensors (25 total)
 
 **Connectivity & Status** (3 sensors)
 - `binary_sensor.meticulous_connected` — Machine connection status
@@ -112,9 +113,11 @@ Once connected, the add-on automatically creates entities in Home Assistant:
 - `sensor.meticulous_shot_weight` — Current weight (grams)
 - `sensor.meticulous_target_weight` — Profile target weight
 
-**Profile** (2 sensors)
+**Profile** (4 sensors)
 - `sensor.meticulous_active_profile` — Currently loaded profile name
 - `sensor.meticulous_profile_author` — Profile creator
+- `image.meticulous_active_profile_image` — Active profile image
+- `sensor.meticulous_active_profile_filename` — Active profile image filename (useful for cache-busting in dashboard templates)
 
 **Statistics** (4 sensors)
 - `sensor.meticulous_total_shots` — Lifetime shot count

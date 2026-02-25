@@ -204,6 +204,20 @@ Home Assistant (MQTT discovery)
 Automations & Dashboard
 ```
 
+### Profile Image Caching
+
+When `fetch_available_profiles()` runs, the add-on:
+
+1. Reads `display.image` from each `PartialProfile` returned by `/api/v1/profile/list`
+2. Extracts the filename (e.g. `abc123.jpg`) via `os.path.basename()`
+3. Fetches any uncached images from `http://{machine_ip}:8080/api/v1/profile/image/{filename}` using `self.api.session`
+4. Writes them to `/config/www/meticulous/profiles/` — served by HA at `/local/meticulous/profiles/`
+5. Removes stale files (profiles that no longer exist)
+
+The raw binary image bytes for the active profile are published to `meticulous_espresso/sensor/active_profile_image/state` via MQTT `image_topic`, which backs an `image` entity in Home Assistant created via MQTT discovery. The cached files in `/config/www/meticulous/profiles/` are the source for these publishes; HA receives and displays the bytes directly without any HTTP proxying.
+
+The active profile's image filename (e.g. `abc123.jpg`) is published separately to `meticulous_espresso/sensor/active_profile_filename/state` as a plain string sensor. This is useful for cache-busting in dashboard templates via `states('sensor.meticulous_espresso_active_profile_filename')`.
+
 ### Socket.IO Events (Priority)
 
 1. **onStatus** (CRITICAL): state, extracting, time, sensors (p, f, w, t)
