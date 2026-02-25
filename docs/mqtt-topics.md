@@ -36,6 +36,8 @@ homeassistant/sensor/meticulous_espresso_total_shots/config
 homeassistant/sensor/meticulous_espresso_last_shot_name/config
 homeassistant/sensor/meticulous_espresso_last_shot_rating/config
 homeassistant/sensor/meticulous_espresso_last_shot_time/config
+homeassistant/image/meticulous_espresso_active_profile_image/config
+homeassistant/sensor/meticulous_espresso_active_profile_filename/config
 ```
 
 ## State Topics
@@ -67,6 +69,9 @@ meticulous_espresso/sensor/total_shots/state            → 1234
 meticulous_espresso/sensor/last_shot_name/state         → "Espresso"
 meticulous_espresso/sensor/last_shot_rating/state       → "like"
 meticulous_espresso/sensor/last_shot_time/state         → "2024-01-15T10:30:00"
+meticulous_espresso/sensor/active_profile_image/state    → <binary PNG image data>
+meticulous_espresso/sensor/active_profile_filename/state → "abc123.jpg"
+meticulous_espresso/profiles                             → [{"profile_id": "...", "name": "...", "image_filename": "..."}]
 ```
 
 ## Command Topics
