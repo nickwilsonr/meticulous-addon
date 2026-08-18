@@ -14,6 +14,8 @@ from datetime import datetime
 from typing import Any, Dict, Optional
 
 import aiohttp
+from requests.adapters import HTTPAdapter
+from urllib3.util.retry import Retry
 
 # Import Meticulous API
 try:
@@ -366,6 +368,12 @@ class MeticulousAddon:
 
             # Initialize API (REST only, Socket.IO will connect separately)
             self.api = Api(base_url=base_url, options=options)  # type: ignore[assignment]
+
+            # Auto-retry once on stale pooled connections (overnight idle)
+            retry = Retry(total=1, connect=1, read=1, allowed_methods=None)
+            adapter = HTTPAdapter(max_retries=retry)
+            self.api.session.mount("http://", adapter)
+            self.api.session.mount("https://", adapter)
 
             # Test connection by fetching device info
             try:
@@ -1306,7 +1314,35 @@ class MeticulousAddon:
                     else:
                         logger.debug(f"get_last_shot returned None or APIError: {last_shot}")
                 except Exception as e:
-                    logger.warning(f"Could not fetch initial last shot: {e}", exc_info=True)
+                    # Fallback: pyMeticulous validation can fail if firmware
+                    # omits fields (e.g. sensors on final data point).
+                    logger.warning(
+                        f"get_last_shot failed ({type(e).__name__}), "
+                        "trying raw API fallback"
+                    )
+                    try:
+                        import requests as req
+                        base = self.base_url
+                        raw = req.get(f"{base}/api/v1/history/last").json()
+                        if raw.get("name"):
+                            initial_data["last_shot_name"] = raw["name"]
+                        initial_data["last_shot_rating"] = (
+                            raw.get("rating") or "none"
+                        )
+                        ts = raw.get("time")
+                        if ts is not None:
+                            initial_data["last_shot_time"] = (
+                                datetime.fromtimestamp(ts)
+                                .astimezone().isoformat()
+                            )
+                        logger.info(
+                            "Got initial last shot via raw API fallback"
+                        )
+                    except Exception as fallback_err:
+                        logger.warning(
+                            f"Raw API fallback also failed: {fallback_err}",
+                            exc_info=True
+                        )
 
             except Exception as e:
                 logger.debug(f"Could not fetch initial statistics: {e}")
@@ -2400,9 +2436,37 @@ class MeticulousAddon:
                 await self.publish_to_homeassistant(last_shot_data)
                 logger.debug("Updated last shot data")
             except Exception as e:
+                # Fallback: pyMeticulous validation can fail if firmware
+                # omits fields (e.g. sensors on final data point). Fetch
+                # raw JSON for just the metadata we need.
                 logger.warning(
-                    f"Could not retrieve last shot: " f"{type(e).__name__}: {e}", exc_info=True
+                    f"get_last_shot failed ({type(e).__name__}), "
+                    "trying raw API fallback"
                 )
+                try:
+                    import requests as req
+                    base = self.base_url
+                    raw = await asyncio.get_running_loop().run_in_executor(
+                        None, lambda: req.get(
+                            f"{base}/api/v1/history/last"
+                        ).json()
+                    )
+                    last_shot_data["last_shot_name"] = raw.get("name")
+                    last_shot_data["last_shot_rating"] = (
+                        raw.get("rating") or "none"
+                    )
+                    ts = raw.get("time")
+                    if ts is not None:
+                        last_shot_data["last_shot_time"] = (
+                            datetime.fromtimestamp(ts).astimezone().isoformat()
+                        )
+                    await self.publish_to_homeassistant(last_shot_data)
+                    logger.info("Updated last shot data via raw API fallback")
+                except Exception as fallback_err:
+                    logger.warning(
+                        f"Raw API fallback also failed: {fallback_err}",
+                        exc_info=True
+                    )
 
         except Exception as e:
             logger.error(f"Error updating statistics: {e}", exc_info=True)

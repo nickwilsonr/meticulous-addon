@@ -2,6 +2,12 @@
 
 All notable user-facing changes to this add-on are documented here.
 
+## [0.31.10] - 2026-08-17
+
+### Fixes
+- **Stale connection recovery** — The add-on now automatically retries when the machine drops an idle HTTP connection (common after overnight idle), instead of failing silently until the next polling cycle
+- **Last shot sensors** — Shot name, rating, and timestamp now update reliably in all cases
+
 ## [0.31.9] - 2026-08-17
 
 ### Fixes
